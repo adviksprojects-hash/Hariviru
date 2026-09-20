@@ -1,17 +1,132 @@
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "postgresql"
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIAL
+  REFUNDED
+}
+
+enum BookingType {
+  ONLINE
+  OFFLINE
+}
+
+enum InquiryStatus {
+  PENDING
+  CONTACTED
+  APPROVED
+  REJECTED
 }
 
 model User {
-    id          String   @id @default(uuid())
-    clerkUserId String   @unique
-    email       String   @unique
-    name        String?
-    imageUrl    String?
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+  id              String   @id @default(uuid())
+  clerkUserId     String   @unique
+  email           String   @unique
+  name            String?
+  imageUrl        String?
+  phone           String?
+  role            Role     @default(USER)
+  
+  managedBranchId String?
+  managedBranch   Branch?  @relation("BranchManager", fields: [managedBranchId], references: [id], onDelete: SetNull)
+  
+  bookings        Booking[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Branch {
+  id           String    @id @default(uuid())
+  name         String
+  slug         String    @unique
+  city         String
+  state        String
+  address      String
+  phone        String
+  email        String
+  description  String?
+  images       String[]  @default([])
+  amenities    String[]  @default([])
+  pricePerSlot Float     @default(0)
+  isActive     Boolean   @default(true)
+  
+  managers     User[]    @relation("BranchManager")
+  slots        Slot[]
+  bookings     Booking[]
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Slot {
+  id        String    @id @default(uuid())
+  branchId  String
+  branch    Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  title     String
+  startTime String
+  endTime   String
+  price     Float
+  isActive  Boolean   @default(true)
+  
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  bookingNumber String        @unique
+  userId        String?
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branchId      String
+  branch        Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  slotId        String?
+  slot          Slot?         @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  slotTitle     String?
+  customerName  String
+  customerEmail String
+  customerPhone String
+  bookingDate   DateTime
+  totalAmount   Float
+  paymentStatus PaymentStatus @default(PENDING)
+  bookingStatus BookingStatus @default(CONFIRMED)
+  bookingType   BookingType   @default(ONLINE)
+  notes         String?
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model FranchiseInquiry {
+  id               String        @id @default(uuid())
+  name             String
+  email            String
+  phone            String
+  city             String
+  investmentBudget String
+  message          String?
+  status           InquiryStatus @default(PENDING)
+  
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 }

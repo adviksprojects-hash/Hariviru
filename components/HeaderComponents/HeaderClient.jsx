@@ -6,28 +6,39 @@ import { usePathname } from 'next/navigation';
 import { navLinks } from '@/data/HeaderData/HeaderData';
 import { cn } from '@/lib/utils';
 
-export default function HeaderClient() {
+export default function HeaderClient({ user }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const pathname = usePathname();
 
+    // Prepare links based on role
+    let links = [...navLinks];
+
+    if (user?.role === 'ADMIN') {
+        links.unshift({ id: 'admin-dash', title: '⚡ Admin Portal', url: '/admin', isBadge: true });
+    } else if (user?.role === 'MANAGER') {
+        links.unshift({ id: 'mgr-dash', title: '💼 Manager Portal', url: '/manager', isBadge: true });
+    }
+
     return (
         <>
-            {/* Desktop Navigation — segmented pill control */}
+            {/* Desktop Navigation */}
             <nav className={cn(
-                "hidden md:flex items-center gap-0.5 rounded-full border border-gray-200 bg-gray-100/70 p-1",
-                "dark:border-white/10 dark:bg-white/5"
+                "hidden md:flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50/80 p-1.5",
+                "dark:border-gray-800 dark:bg-gray-900/60"
             )}>
-                {navLinks.map((link) => {
+                {links.map((link) => {
                     const isActive = pathname === link.url;
                     return (
                         <Link
                             key={link.id}
                             href={link.url}
                             className={cn(
-                                "rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-300",
-                                isActive 
-                                    ? "bg-white text-gray-950 shadow-sm dark:bg-gray-950 dark:text-white"
-                                    : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                                "rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200",
+                                link.isBadge
+                                    ? "bg-linear-to-r from-rose-600 to-amber-600 text-white font-semibold shadow-sm hover:opacity-90"
+                                    : isActive 
+                                        ? "bg-white text-gray-950 shadow-xs dark:bg-gray-950 dark:text-white font-semibold"
+                                        : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
                             )}
                         >
                             {link.title}
@@ -36,42 +47,38 @@ export default function HeaderClient() {
                 })}
             </nav>
 
-            {/* Mobile Menu Toggle — custom animated hamburger */}
+            {/* Mobile Menu Toggle Button */}
             <button
                 className={cn(
-                    "md:hidden relative size-9 rounded-full text-gray-700 outline-hidden focus-visible:ring-2 focus-visible:ring-gray-950",
-                    "dark:text-gray-200 dark:focus-visible:ring-white"
+                    "md:hidden relative size-10 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 outline-hidden flex items-center justify-center",
+                    "dark:text-gray-200"
                 )}
                 onClick={() => setIsMobileMenuOpen((open) => !open)}
                 aria-label="Toggle navigation menu"
                 aria-expanded={isMobileMenuOpen}
-                aria-controls="mobile-nav-panel"
             >
                 <span
-                    className={`absolute left-1/2 top-1/2 h-px w-5 -translate-x-1/2 bg-current transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-45' : '-translate-y-2'
-                        }`}
+                    className={`absolute h-0.5 w-5 bg-current transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-45' : '-translate-y-1.5'}`}
                 />
                 <span
-                    className={`absolute left-1/2 top-1/2 h-px w-5 -translate-x-1/2 -translate-y-1/2 bg-current transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'
-                        }`}
+                    className={`absolute h-0.5 w-5 bg-current transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}
                 />
                 <span
-                    className={`absolute left-1/2 top-1/2 h-px w-5 -translate-x-1/2 bg-current transition-transform duration-300 ${isMobileMenuOpen ? '-rotate-45' : 'translate-y-2'
-                        }`}
+                    className={`absolute h-0.5 w-5 bg-current transition-transform duration-300 ${isMobileMenuOpen ? '-rotate-45' : 'translate-y-1.5'}`}
                 />
             </button>
 
-            {/* Mobile Navigation Panel — solid card, native CSS entrance */}
+            {/* Mobile Navigation Drawer */}
             {isMobileMenuOpen && (
                 <div
                     id="mobile-nav-panel"
                     className={cn(
-                        "md:hidden absolute inset-x-3 top-full mt-2 rounded-2xl border border-gray-200 bg-white shadow-lg shadow-gray-950/5 transition-[opacity,transform] duration-300 ease-out starting:opacity-0 starting:scale-95",
-                        "dark:border-white/10 dark:bg-gray-950"
+                        "md:hidden absolute inset-x-4 top-full mt-3 rounded-2xl border border-gray-200 bg-white/95 backdrop-blur-xl p-3 shadow-2xl transition-all duration-300 z-50",
+                        "dark:border-gray-800 dark:bg-gray-950/95"
                     )}
                 >
-                    <nav className="flex flex-col gap-1 p-2">
-                        {navLinks.map((link) => {
+                    <nav className="flex flex-col gap-1.5">
+                        {links.map((link) => {
                             const isActive = pathname === link.url;
                             return (
                                 <Link
@@ -79,13 +86,16 @@ export default function HeaderClient() {
                                     href={link.url}
                                     onClick={() => setIsMobileMenuOpen(false)}
                                     className={cn(
-                                        "rounded-xl px-4 py-3 text-base font-medium transition-colors duration-200",
-                                        isActive
-                                            ? "bg-gray-950 text-white dark:bg-white dark:text-gray-950"
-                                            : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5"
+                                        "rounded-xl px-4 py-3 text-base font-medium transition-colors duration-200 flex items-center justify-between",
+                                        link.isBadge
+                                            ? "bg-linear-to-r from-rose-600 to-amber-600 text-white font-semibold"
+                                            : isActive
+                                                ? "bg-gray-900 text-white dark:bg-white dark:text-gray-950 font-semibold"
+                                                : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-900"
                                     )}
                                 >
-                                    {link.title}
+                                    <span>{link.title}</span>
+                                    {isActive && <span className="w-2 h-2 rounded-full bg-rose-500"></span>}
                                 </Link>
                             );
                         })}
