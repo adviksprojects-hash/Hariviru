@@ -7,8 +7,13 @@ export const metadata = {
 
 export default function FranchisePage() {
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 py-16 px-4">
-      <div className="container mx-auto max-w-5xl">
+    <main className="flex-1 bg-gradient-to-b from-amber-50/40 via-white to-rose-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen py-16 px-4 relative overflow-hidden">
+      
+      {/* Background Ambient Glows */}
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-rose-400/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-40 -left-40 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div className="container mx-auto max-w-5xl relative z-10">
         
         {/* Hero Section */}
         <div className="text-center max-w-3xl mx-auto mb-16">
@@ -25,7 +30,7 @@ export default function FranchisePage() {
 
         {/* Benefits Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
+          <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
             <div className="text-3xl mb-3">📈</div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">High ROI & Fast Payback</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
@@ -33,7 +38,7 @@ export default function FranchisePage() {
             </p>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
+          <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
             <div className="text-3xl mb-3">🛠️</div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">Turnkey Setup Assistance</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
@@ -41,7 +46,7 @@ export default function FranchisePage() {
             </p>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
+          <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
             <div className="text-3xl mb-3">📱</div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tech & Marketing Engine</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
@@ -51,7 +56,7 @@ export default function FranchisePage() {
         </div>
 
         {/* Application Form Container */}
-        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-8 sm:p-12 shadow-xl max-w-3xl mx-auto">
+        <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl border border-gray-200 dark:border-gray-800 p-8 sm:p-12 shadow-xl max-w-3xl mx-auto">
           <h2 className="text-2xl font-black text-gray-900 dark:text-white text-center">
             Franchise Application Form
           </h2>

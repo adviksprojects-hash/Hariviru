@@ -7,8 +7,13 @@ export const metadata = {
 
 export default function AboutUsPage() {
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 py-16 px-4">
-      <div className="container mx-auto max-w-4xl">
+    <main className="flex-1 bg-gradient-to-b from-amber-50/40 via-white to-rose-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen py-16 px-4 relative overflow-hidden">
+      
+      {/* Background Ambient Glows */}
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-rose-400/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-40 -left-40 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div className="container mx-auto max-w-4xl relative z-10">
         
         <div className="text-center mb-12">
           <span className="text-xs font-bold uppercase tracking-widest text-rose-600">Our Story</span>
@@ -20,7 +25,7 @@ export default function AboutUsPage() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 sm:p-12 border border-gray-200 dark:border-gray-800 shadow-sm space-y-8">
+        <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl p-8 sm:p-12 border border-gray-200 dark:border-gray-800 shadow-sm space-y-8">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">What We Do</h2>
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -38,7 +43,7 @@ export default function AboutUsPage() {
             <div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">🚀 Nationwide Presence</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Rapidly expanding across major metropolitan centers including Hyderabad, Bengaluru, and tier-1 cities.
+                Rapidly expanding across major metropolitan centers including Hyderabad, Bengaluru, Pune, and tier-1 cities.
               </p>
             </div>
           </div>

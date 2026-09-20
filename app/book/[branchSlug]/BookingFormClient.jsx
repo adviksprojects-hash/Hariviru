@@ -3,11 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createOnlineBooking } from "@/lib/actions";
+import { celebrationPackages, packageAddOns } from "@/data/PackageData/PackageData";
 
 export default function BookingFormClient({ branch, initialSlotId }) {
   const todayStr = new Date().toISOString().split("T")[0];
 
+  const [selectedPackageId, setSelectedPackageId] = useState("pkg-1");
   const [selectedSlotId, setSelectedSlotId] = useState(initialSlotId || branch.slots[0]?.id || "");
+  const [selectedAddOns, setSelectedAddOns] = useState([]);
   const [bookingDate, setBookingDate] = useState(todayStr);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -18,13 +21,39 @@ export default function BookingFormClient({ branch, initialSlotId }) {
   const [error, setError] = useState(null);
   const [bookingResult, setBookingResult] = useState(null);
 
+  // Selected package details
+  const selectedPackage = celebrationPackages.find((p) => p.id === selectedPackageId) || celebrationPackages[0];
   const selectedSlot = branch.slots.find((s) => s.id === selectedSlotId);
-  const totalPrice = selectedSlot ? selectedSlot.price : branch.pricePerSlot;
+
+  // Calculate total price: Package Offer Price + Selected Add-Ons
+  const addOnsTotal = selectedAddOns.reduce((sum, addonId) => {
+    const addon = packageAddOns.find((a) => a.id === addonId);
+    return sum + (addon ? addon.price : 0);
+  }, 0);
+
+  const totalPrice = selectedPackage.offerPrice + addOnsTotal;
+
+  const toggleAddOn = (addonId) => {
+    if (selectedAddOns.includes(addonId)) {
+      setSelectedAddOns(selectedAddOns.filter((id) => id !== addonId));
+    } else {
+      setSelectedAddOns([...selectedAddOns, addonId]);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    const addOnNames = selectedAddOns
+      .map((id) => packageAddOns.find((a) => a.id === id)?.name)
+      .filter(Boolean)
+      .join(", ");
+
+    const combinedNotes = `[Package: ${selectedPackage.badge} (${selectedPackage.name})] ${
+      addOnNames ? `[Add-Ons: ${addOnNames}] ` : ""
+    }${notes ? `[Notes: ${notes}]` : ""}`;
 
     try {
       const res = await createOnlineBooking({
@@ -34,7 +63,8 @@ export default function BookingFormClient({ branch, initialSlotId }) {
         customerName,
         customerEmail,
         customerPhone,
-        notes,
+        notes: combinedNotes,
+        totalAmount: totalPrice,
       });
 
       if (res.success) {
@@ -62,7 +92,7 @@ export default function BookingFormClient({ branch, initialSlotId }) {
         </div>
 
         <p className="text-xs text-gray-500 mt-4 max-w-sm mx-auto">
-          Our team at {branch.name} will contact you on {customerPhone} to verify special decorations.
+          Our team at {branch.name} will contact you on {customerPhone} to verify special decorations for {selectedPackage.badge}.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -91,53 +121,103 @@ export default function BookingFormClient({ branch, initialSlotId }) {
         </div>
       )}
 
-      {/* Step 1: Select Celebration Date */}
+      {/* Step 1: Choose Package */}
       <div>
-        <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
-          1. Select Celebration Date
-        </label>
-        <input
-          type="date"
-          min={todayStr}
-          value={bookingDate}
-          onChange={(e) => setBookingDate(e.target.value)}
-          required
-          className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
-        />
-      </div>
-
-      {/* Step 2: Select Time Slot */}
-      <div>
-        <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
-          2. Select Available Time Slot
+        <label className="block text-sm font-bold text-gray-900 dark:text-white mb-3">
+          1. Select Celebration Package (1 Hour)
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {branch.slots.map((slot) => {
-            const isSelected = selectedSlotId === slot.id;
+          {celebrationPackages.map((pkg) => {
+            const isSelected = selectedPackageId === pkg.id;
             return (
               <button
-                key={slot.id}
+                key={pkg.id}
                 type="button"
-                onClick={() => setSelectedSlotId(slot.id)}
-                className={`p-4 rounded-2xl border text-left transition-all ${
+                onClick={() => setSelectedPackageId(pkg.id)}
+                className={`p-4 rounded-2xl border text-left transition-all relative ${
                   isSelected
-                    ? "border-rose-600 bg-rose-50 dark:bg-rose-950/40 ring-2 ring-rose-500"
-                    : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-gray-900"
+                    ? "border-rose-600 bg-rose-50/50 dark:bg-rose-950/40 ring-2 ring-rose-500"
+                    : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300"
                 }`}
               >
-                <div className="font-bold text-sm text-gray-900 dark:text-white">{slot.title}</div>
-                <div className="text-xs text-gray-500 mt-1">🕒 {slot.startTime} - {slot.endTime}</div>
-                <div className="text-sm font-black text-rose-600 mt-2">₹{slot.price}</div>
+                <div className="text-xs font-bold text-gray-500">{pkg.badge}</div>
+                <div className="font-black text-sm text-gray-900 dark:text-white mt-0.5">{pkg.name}</div>
+                <div className="mt-2 flex items-baseline gap-1.5">
+                  <span className="text-xl font-black text-rose-600">₹{pkg.offerPrice}</span>
+                  <span className="text-xs text-gray-400 line-through">₹{pkg.originalPrice}</span>
+                </div>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Step 3: Contact & Personal Details */}
+      {/* Step 2: Select Date & Time Slot */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
+            2. Select Celebration Date
+          </label>
+          <input
+            type="date"
+            min={todayStr}
+            value={bookingDate}
+            onChange={(e) => setBookingDate(e.target.value)}
+            required
+            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
+            3. Select Time Slot
+          </label>
+          <select
+            value={selectedSlotId}
+            onChange={(e) => setSelectedSlotId(e.target.value)}
+            required
+            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
+          >
+            {branch.slots.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.title} ({s.startTime} - {s.endTime})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Step 3: Optional Add-Ons */}
+      <div>
+        <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
+          4. Optional Celebration Add-Ons
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {packageAddOns.map((addon) => {
+            const isChecked = selectedAddOns.includes(addon.id);
+            return (
+              <button
+                key={addon.id}
+                type="button"
+                onClick={() => toggleAddOn(addon.id)}
+                className={`p-3 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-colors ${
+                  isChecked
+                    ? "border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 font-bold"
+                    : "border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300"
+                }`}
+              >
+                <span>{addon.name}</span>
+                <span className="text-rose-600 font-bold">+₹{addon.price}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Step 4: Contact & Personal Details */}
       <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
         <label className="block text-sm font-bold text-gray-900 dark:text-white">
-          3. Contact & Celebration Details
+          5. Contact & Personal Details
         </label>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -148,7 +228,7 @@ export default function BookingFormClient({ branch, initialSlotId }) {
               required
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="e.g. Rahul Sharma"
+              placeholder="e.g. Harshada Jadhav"
               className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
             />
           </div>
@@ -160,7 +240,7 @@ export default function BookingFormClient({ branch, initialSlotId }) {
               required
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
-              placeholder="+91 98765 43210"
+              placeholder="+91 97624 86649"
               className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
             />
           </div>
@@ -172,18 +252,18 @@ export default function BookingFormClient({ branch, initialSlotId }) {
             type="email"
             value={customerEmail}
             onChange={(e) => setCustomerEmail(e.target.value)}
-            placeholder="rahul@example.com"
+            placeholder="customer@example.com"
             className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Occasion / Special Decoration Request</label>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Special Occasion / Cake Name Request</label>
           <textarea
-            rows={3}
+            rows={2}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g., Surprise 25th Birthday with red balloon arch and 'Happy Birthday Rahul' name board."
+            placeholder="e.g., Birthday surprise for Rahul. Name on cake: 'Happy Birthday Rahul'"
             className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
           />
         </div>
@@ -192,8 +272,9 @@ export default function BookingFormClient({ branch, initialSlotId }) {
       {/* Summary & Submit */}
       <div className="pt-6 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
         <div>
-          <span className="text-xs text-gray-500 block">Total Payable</span>
+          <span className="text-xs text-gray-500 block">Total Package Amount</span>
           <span className="text-3xl font-black text-rose-600">₹{totalPrice}</span>
+          <span className="text-xs text-gray-400 block font-medium">Includes Special Offer Price</span>
         </div>
 
         <button

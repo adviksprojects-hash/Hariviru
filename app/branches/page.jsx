@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/prisma";
+import BranchCard from "@/components/BranchComponents/BranchCard";
 
 export const metadata = {
   title: "Explore Branches | HaruViru Celebration House",
@@ -25,12 +26,20 @@ export default async function BranchesPage({ searchParams }) {
   });
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 py-12 px-4">
-      <div className="container mx-auto max-w-6xl">
+    <main className="flex-1 bg-gradient-to-b from-amber-50/40 via-white to-rose-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen py-12 px-4 relative overflow-hidden">
+      
+      {/* Background Ambient Glows */}
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-rose-400/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-40 -left-40 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div className="container mx-auto max-w-6xl relative z-10">
         
         {/* Page Header */}
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">
+          <span className="px-4 py-1.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 text-xs font-bold uppercase tracking-widest shadow-2xs">
+            Franchise Directory
+          </span>
+          <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight mt-3">
             HaruViru Celebration House Branches
           </h1>
           <p className="mt-3 text-gray-600 dark:text-gray-400">
@@ -64,61 +73,7 @@ export default async function BranchesPage({ searchParams }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {branches.map((branch) => (
-              <div
-                key={branch.id}
-                className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/80 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="relative h-56 w-full bg-gray-200">
-                    <img
-                      src={branch.images?.[0] || "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=800&q=80"}
-                      alt={branch.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-semibold">
-                      📍 {branch.city}, {branch.state}
-                    </div>
-                  </div>
-
-                  <div className="p-6">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {branch.name}
-                    </h2>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      📍 {branch.address}
-                    </p>
-
-                    <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-                      {branch.description}
-                    </p>
-
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                      {branch.amenities.map((amenity, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-700 dark:text-gray-300"
-                        >
-                          ✓ {amenity}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6 pt-0 border-t border-gray-100 dark:border-gray-800 mt-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs text-gray-500 block">Slot Price</span>
-                    <span className="text-2xl font-black text-rose-600">₹{branch.pricePerSlot}</span>
-                  </div>
-
-                  <Link
-                    href={`/branches/${branch.slug}`}
-                    className="px-6 py-3 rounded-full bg-linear-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white font-bold text-sm shadow-md transition-all"
-                  >
-                    View & Book →
-                  </Link>
-                </div>
-              </div>
+              <BranchCard key={branch.id} branch={branch} />
             ))}
           </div>
         )}

@@ -56,26 +56,29 @@ model User {
 }
 
 model Branch {
-  id           String    @id @default(uuid())
-  name         String
-  slug         String    @unique
-  city         String
-  state        String
-  address      String
-  phone        String
-  email        String
-  description  String?
-  images       String[]  @default([])
-  amenities    String[]  @default([])
-  pricePerSlot Float     @default(0)
-  isActive     Boolean   @default(true)
+  id              String    @id @default(uuid())
+  name            String
+  slug            String    @unique
+  city            String
+  state           String
+  address         String
+  phone           String
+  email           String
+  description     String?
+  images          String[]  @default([])
+  amenities       String[]  @default([])
+  pricePerSlot    Float     @default(0)
+  mapUrl          String?
+  instagramHandle String?
+  whatsapp        String?
+  isActive        Boolean   @default(true)
   
-  managers     User[]    @relation("BranchManager")
-  slots        Slot[]
-  bookings     Booking[]
+  managers        User[]    @relation("BranchManager")
+  slots           Slot[]
+  bookings        Booking[]
   
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Slot {

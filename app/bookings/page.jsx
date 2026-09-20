@@ -25,15 +25,23 @@ export default async function UserBookingsPage() {
   });
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 py-12 px-4">
-      <div className="container mx-auto max-w-4xl">
+    <main className="flex-1 bg-gradient-to-b from-amber-50/40 via-white to-rose-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen py-12 px-4 relative overflow-hidden">
+      
+      {/* Background Ambient Glows */}
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-rose-400/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-40 -left-40 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div className="container mx-auto max-w-4xl relative z-10">
         
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+            <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 text-xs font-bold uppercase tracking-wider">
+              Customer Portal
+            </span>
+            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight mt-2">
               My Celebration Bookings
             </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
               Logged in as <span className="font-semibold">{user.name || user.email}</span>
             </p>
           </div>
@@ -47,7 +55,7 @@ export default async function UserBookingsPage() {
         </div>
 
         {bookings.length === 0 ? (
-          <div className="bg-white dark:bg-gray-900 rounded-3xl p-12 text-center border border-gray-200 dark:border-gray-800">
+          <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl p-12 text-center border border-gray-200 dark:border-gray-800 shadow-sm">
             <div className="text-4xl mb-3">🎉</div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">No Bookings Yet</h2>
             <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
@@ -65,7 +73,7 @@ export default async function UserBookingsPage() {
             {bookings.map((booking) => (
               <div
                 key={booking.id}
-                className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
+                className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-2">

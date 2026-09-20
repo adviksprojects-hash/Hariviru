@@ -7,14 +7,26 @@ export default async function Header() {
     const user = await checkUser();
 
     return (
-        <header className="sticky top-0 z-50 w-full bg-white/85 dark:bg-gray-950/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shadow-xs">
+        <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-gray-950/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shadow-xs">
             <div className="container mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
 
-                {/* Brand / Logo */}
-                <Link href="/" className="text-2xl font-black tracking-tight text-gray-900 dark:text-white flex items-center gap-1.5">
-                    <span className="p-2 rounded-xl bg-linear-to-tr from-rose-500 to-amber-500 text-white font-black text-xl shadow-md">HV</span>
-                    <span>Haru<span className="text-transparent bg-clip-text bg-linear-to-r from-rose-600 to-amber-600">Viru</span></span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">Celebrations</span>
+                {/* Brand Logo & Text */}
+                <Link href="/" className="flex items-center gap-3 group">
+                    <div className="h-14 w-14 overflow-hidden rounded-2xl bg-white p-0.5 shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0">
+                        <img
+                            src="/logo.jpg"
+                            alt="HaruViru Logo"
+                            className="h-20 w-20 max-w-none object-contain scale-135 group-hover:scale-145 transition-transform duration-300"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-xl sm:text-2xl font-black tracking-tight leading-none text-gray-900 dark:text-white">
+                            Haru<span className="text-transparent bg-clip-text bg-linear-to-r from-rose-600 via-amber-600 to-rose-500">Viru</span>
+                        </span>
+                        <span className="text-[10px] sm:text-xs font-bold tracking-widest uppercase text-rose-600 dark:text-rose-400 mt-0.5">
+                            Celebration House
+                        </span>
+                    </div>
                 </Link>
 
                 {/* Navigation (Client-Side for Active States & Mobile Menu) */}

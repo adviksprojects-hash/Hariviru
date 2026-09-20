@@ -16,7 +16,10 @@ export default function AdminBranchesClient({ initialBranches }) {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [pricePerSlot, setPricePerSlot] = useState(4999);
+  const [pricePerSlot, setPricePerSlot] = useState(1499);
+  const [mapUrl, setMapUrl] = useState("");
+  const [instagramHandle, setInstagramHandle] = useState("celebration_house_23");
+  const [whatsapp, setWhatsapp] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80");
 
@@ -34,9 +37,12 @@ export default function AdminBranchesClient({ initialBranches }) {
         phone,
         email,
         pricePerSlot,
+        mapUrl: mapUrl || `https://maps.google.com/?q=${encodeURIComponent(address + " " + city)}`,
+        instagramHandle: instagramHandle || "celebration_house_23",
+        whatsapp: whatsapp || phone.replace(/[^0-9]/g, ""),
         description,
         images: [imageUrl],
-        amenities: ["4K Theater", "Ambient Lighting", "Private Lounge", "Theme Decor"],
+        amenities: ["4K Theater", "Ambient Lighting", "Private Lounge", "Theme Decor", "Cake & Snacks"],
       });
 
       if (res.success) {
@@ -47,6 +53,7 @@ export default function AdminBranchesClient({ initialBranches }) {
         setCity("");
         setAddress("");
         setPhone("");
+        setMapUrl("");
       }
     } catch (err) {
       setError(err.message || "Failed to create branch.");
@@ -80,7 +87,7 @@ export default function AdminBranchesClient({ initialBranches }) {
       {/* Add Branch Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-gray-200 dark:border-gray-800 relative">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-gray-200 dark:border-gray-800 relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowAddModal(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold"
@@ -149,11 +156,11 @@ export default function AdminBranchesClient({ initialBranches }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Phone *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Phone Number *</label>
                   <input
                     type="tel"
                     required
-                    placeholder="+91 98765 43210"
+                    placeholder="+91 97624 86649"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
@@ -161,7 +168,31 @@ export default function AdminBranchesClient({ initialBranches }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Price per Slot (₹) *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">WhatsApp Number</label>
+                  <input
+                    type="tel"
+                    placeholder="9762486649"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Instagram Handle</label>
+                  <input
+                    type="text"
+                    placeholder="celebration_house_23"
+                    value={instagramHandle}
+                    onChange={(e) => setInstagramHandle(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Package Starting Price (₹)</label>
                   <input
                     type="number"
                     required
@@ -170,6 +201,17 @@ export default function AdminBranchesClient({ initialBranches }) {
                     className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm font-bold"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Google Maps Location Link</label>
+                <input
+                  type="url"
+                  placeholder="https://maps.google.com/?q=..."
+                  value={mapUrl}
+                  onChange={(e) => setMapUrl(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-xs"
+                />
               </div>
 
               <div>
@@ -237,9 +279,9 @@ export default function AdminBranchesClient({ initialBranches }) {
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{b.name}</h3>
               <p className="text-xs text-gray-500 mt-1">📍 {b.address}</p>
 
-              <div className="mt-4 flex gap-4 text-xs text-gray-600 dark:text-gray-400">
-                <div>💰 Slot Rate: <span className="font-bold text-rose-600">₹{b.pricePerSlot}</span></div>
-                <div>📋 Total Bookings: <span className="font-bold">{b._count?.bookings || 0}</span></div>
+              <div className="mt-4 flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400">
+                <div>💰 Offers: <span className="font-bold text-rose-600">₹1,499 - ₹3,999</span></div>
+                <div>📸 IG: <span className="font-bold">@{b.instagramHandle || "celebration_house_23"}</span></div>
               </div>
 
               <div className="mt-2 text-xs text-gray-500">
