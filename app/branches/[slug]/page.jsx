@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/prisma";
 import PackageShowcase from "@/components/PackageComponents/PackageShowcase";
+import BranchImageSlider from "@/components/BranchComponents/BranchImageSlider";
 
 export async function generateMetadata({ params }) {
   const slug = (await params).slug;
@@ -119,26 +120,51 @@ export default async function BranchDetailPage({ params }) {
           </Link>
         </div>
 
-        {/* Photo Gallery Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-          {branch.images.length > 0 ? (
-            branch.images.map((img, idx) => (
-              <div
-                key={idx}
-                className={`overflow-hidden rounded-3xl bg-gray-200 h-64 md:h-80 ${idx === 0 ? "md:col-span-2" : ""}`}
-              >
-                <img
-                  src={img}
-                  alt={`${branch.name} ${idx + 1}`}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-            ))
-          ) : (
-            <div className="col-span-3 h-80 rounded-3xl bg-gray-200 flex items-center justify-center text-gray-400">
-              No Photos Available
+        {/* Two-Column Side-by-Side Photo Frames Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 items-start">
+          {/* Column 1: Main Banner Image Frame */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-gray-900 dark:text-white">
+                🖼️ Main Franchise Banner
+              </h3>
             </div>
-          )}
+            <div className="relative h-72 sm:h-[420px] w-full rounded-3xl overflow-hidden shadow-xl border border-gray-200/80 dark:border-gray-800 bg-gray-900 group">
+              <img
+                src={branch.images?.[0] || "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80"}
+                alt={`${branch.name} Main Banner`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 pointer-events-none"></div>
+              <div className="absolute bottom-6 left-6 text-white">
+                <span className="px-3 py-1 rounded-full bg-rose-600 text-white text-[11px] font-bold uppercase tracking-wider shadow-md">
+                  Primary Location View
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black mt-2 drop-shadow-md">{branch.name}</h2>
+              </div>
+            </div>
+          </div>
+
+          {/* Column 2: Additional Gallery Images Auto-Slider Frame */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-gray-900 dark:text-white">
+                📸 Additional Setup Photos (Auto-Sliding)
+              </h3>
+            </div>
+
+            {branch.images && branch.images.length > 1 ? (
+              <BranchImageSlider
+                images={branch.images.slice(1)}
+                branchName={branch.name}
+                autoSlideInterval={3500}
+              />
+            ) : (
+              <div className="h-72 sm:h-[420px] rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 font-semibold border border-gray-200 dark:border-gray-700">
+                No Additional Photos Added
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Info Grid */}

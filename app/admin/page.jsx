@@ -12,15 +12,62 @@ export default async function AdminDashboardPage() {
   const totalBranches = await db.branch.count();
   const activeBranches = await db.branch.count({ where: { isActive: true } });
   const totalManagers = await db.user.count({ where: { role: "MANAGER" } });
-  const totalBookings = await db.booking.count();
+  const totalBookingsCount = await db.booking.count();
   const pendingInquiries = await db.franchiseInquiry.count({ where: { status: "PENDING" } });
 
-  const totalRevenueAgg = await db.booking.aggregate({
-    where: { bookingStatus: { in: ["CONFIRMED", "COMPLETED"] } },
-    _sum: { totalAmount: true },
+  // Fetch all branches with bookings for franchise-wise revenue analysis
+  const branches = await db.branch.findMany({
+    include: {
+      bookings: {
+        where: { bookingStatus: { in: ["CONFIRMED", "COMPLETED"] } },
+      },
+    },
+    orderBy: { createdAt: "desc" },
   });
 
-  const totalRevenue = totalRevenueAgg._sum.totalAmount || 0;
+  // Calculate franchise-wise breakdown
+  const franchiseRevenueList = branches.map((b) => {
+    const onlineBookings = b.bookings.filter((bk) => bk.bookingType === "ONLINE");
+    const offlineBookings = b.bookings.filter((bk) => bk.bookingType === "OFFLINE");
+
+    const onlineRevenue = onlineBookings.reduce((sum, bk) => sum + bk.totalAmount, 0);
+    const offlineRevenue = offlineBookings.reduce((sum, bk) => sum + bk.totalAmount, 0);
+    const totalBranchRevenue = onlineRevenue + offlineRevenue;
+
+    return {
+      id: b.id,
+      name: b.name,
+      city: b.city,
+      totalBranchRevenue,
+      onlineCount: onlineBookings.length,
+      onlineRevenue,
+      offlineCount: offlineBookings.length,
+      offlineRevenue,
+      totalCount: b.bookings.length,
+    };
+  });
+
+  // Fetch all confirmed/completed bookings for monthly revenue analysis
+  const allBookings = await db.booking.findMany({
+    where: { bookingStatus: { in: ["CONFIRMED", "COMPLETED"] } },
+    select: { bookingDate: true, totalAmount: true, bookingType: true },
+  });
+
+  const totalRevenue = allBookings.reduce((sum, b) => sum + b.totalAmount, 0);
+
+  // Group bookings by Month (Year-Month key e.g. "2026-09")
+  const monthlyRevenueMap = {};
+  allBookings.forEach((b) => {
+    const d = new Date(b.bookingDate);
+    const monthKey = d.toLocaleString("en-US", { month: "short", year: "numeric" });
+    if (!monthlyRevenueMap[monthKey]) {
+      monthlyRevenueMap[monthKey] = { total: 0, online: 0, offline: 0, count: 0 };
+    }
+    monthlyRevenueMap[monthKey].total += b.totalAmount;
+    monthlyRevenueMap[monthKey].count += 1;
+    if (b.bookingType === "ONLINE") monthlyRevenueMap[monthKey].online += b.totalAmount;
+    else monthlyRevenueMap[monthKey].offline += b.totalAmount;
+  });
 
   const recentBookings = await db.booking.findMany({
     take: 5,
@@ -69,9 +116,9 @@ export default async function AdminDashboardPage() {
         {/* System Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
-            <div className="text-xs font-semibold text-gray-500">Total Revenue</div>
+            <div className="text-xs font-semibold text-gray-500">Total System Revenue</div>
             <div className="text-3xl font-black text-emerald-600 mt-1">₹{totalRevenue.toLocaleString()}</div>
-            <div className="text-xs text-gray-400 mt-1">Across all branches</div>
+            <div className="text-xs text-gray-400 mt-1">Across all franchises</div>
           </div>
 
           <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
@@ -87,9 +134,87 @@ export default async function AdminDashboardPage() {
           </div>
 
           <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
-            <div className="text-xs font-semibold text-gray-500">Total Bookings</div>
-            <div className="text-3xl font-black text-amber-600 mt-1">{totalBookings}</div>
+            <div className="text-xs font-semibold text-gray-500">Total Bookings Logged</div>
+            <div className="text-3xl font-black text-amber-600 mt-1">{totalBookingsCount}</div>
             <div className="text-xs text-gray-400 mt-1">Online & Offline combined</div>
+          </div>
+        </div>
+
+        {/* Franchise-Wise Revenue Breakdown Table */}
+        <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-200 dark:border-gray-800 shadow-xs mb-10">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-black text-gray-900 dark:text-white">
+                📊 Franchise-Wise Booking & Revenue Analysis
+              </h2>
+              <p className="text-xs text-gray-500">Revenue breakdown by each franchise location (Online vs Offline walk-ins).</p>
+            </div>
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">
+              Total: ₹{totalRevenue.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-500 uppercase">
+                  <th className="py-3 px-3">Franchise Branch</th>
+                  <th className="py-3 px-3">Online Bookings</th>
+                  <th className="py-3 px-3">Offline Walk-ins</th>
+                  <th className="py-3 px-3">Total Bookings</th>
+                  <th className="py-3 px-3 text-right">Total Revenue (₹)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {franchiseRevenueList.map((f) => (
+                  <tr key={f.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                    <td className="py-4 px-3 font-bold text-gray-900 dark:text-white">
+                      {f.name} <span className="text-xs font-normal text-gray-400">({f.city})</span>
+                    </td>
+                    <td className="py-4 px-3 text-xs">
+                      <span className="font-semibold">{f.onlineCount} bookings</span>
+                      <div className="text-gray-400">₹{f.onlineRevenue.toLocaleString()}</div>
+                    </td>
+                    <td className="py-4 px-3 text-xs">
+                      <span className="font-semibold">{f.offlineCount} walk-ins</span>
+                      <div className="text-gray-400">₹{f.offlineRevenue.toLocaleString()}</div>
+                    </td>
+                    <td className="py-4 px-3 text-xs font-bold text-gray-700 dark:text-gray-300">
+                      {f.totalCount} total
+                    </td>
+                    <td className="py-4 px-3 text-right font-black text-rose-600 text-base">
+                      ₹{f.totalBranchRevenue.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Monthly Revenue Analysis Card */}
+        <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-200 dark:border-gray-800 shadow-xs mb-10">
+          <h2 className="text-xl font-black text-gray-900 dark:text-white mb-1">
+            🗓️ Monthly Revenue Analysis
+          </h2>
+          <p className="text-xs text-gray-500 mb-4">Month-by-month earnings timeline across all franchise branches.</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {Object.keys(monthlyRevenueMap).length === 0 ? (
+              <p className="text-xs text-gray-400 col-span-3 py-4 text-center">No monthly records available yet.</p>
+            ) : (
+              Object.entries(monthlyRevenueMap).map(([month, data]) => (
+                <div key={month} className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  <div className="text-xs font-bold uppercase tracking-wider text-rose-600">{month}</div>
+                  <div className="text-2xl font-black text-gray-900 dark:text-white mt-1">₹{data.total.toLocaleString()}</div>
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
+                    <span>Online: ₹{data.online.toLocaleString()}</span>
+                    <span>Offline: ₹{data.offline.toLocaleString()}</span>
+                  </div>
+                  <div className="text-[11px] text-gray-400 mt-1">{data.count} Total Bookings</div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

@@ -18,7 +18,7 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
   const [offlineCustomerName, setOfflineCustomerName] = useState("");
   const [offlineCustomerPhone, setOfflineCustomerPhone] = useState("");
   const [offlineCustomerEmail, setOfflineCustomerEmail] = useState("");
-  const [offlineAmount, setOfflineAmount] = useState(branch.slots[0]?.price || branch.pricePerSlot || 5000);
+  const [offlineAmount, setOfflineAmount] = useState("");
   const [offlineNotes, setOfflineNotes] = useState("");
   const [offlinePaymentStatus, setOfflinePaymentStatus] = useState("PAID");
 
@@ -169,16 +169,12 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Select Time Slot *</label>
                 <select
                   value={offlineSlotId}
-                  onChange={(e) => {
-                    setOfflineSlotId(e.target.value);
-                    const s = branch.slots.find(x => x.id === e.target.value);
-                    if (s) setOfflineAmount(s.price);
-                  }}
+                  onChange={(e) => setOfflineSlotId(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-sm"
                 >
                   {branch.slots.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.title} (₹{s.price})
+                      {s.title} ({s.startTime} - {s.endTime})
                     </option>
                   ))}
                 </select>
@@ -216,6 +212,7 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
                   <input
                     type="number"
                     required
+                    placeholder="Enter amount (e.g. 1499)"
                     value={offlineAmount}
                     onChange={(e) => setOfflineAmount(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm font-bold"
