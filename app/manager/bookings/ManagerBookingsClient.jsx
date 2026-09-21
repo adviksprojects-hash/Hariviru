@@ -6,7 +6,7 @@ import { createOfflineBooking, updateBookingStatus } from "@/lib/actions";
 export default function ManagerBookingsClient({ branch, initialBookings }) {
   const [bookings, setBookings] = useState(initialBookings);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState("ALL"); // ALL, ONLINE, OFFLINE
+  const [filterType, setFilterType] = useState("ALL"); // ALL, PENDING, ONLINE, OFFLINE
 
   const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -26,10 +26,12 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
     const matchesSearch =
       b.bookingNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.customerPhone.includes(searchQuery);
+      b.customerPhone.includes(searchQuery) ||
+      (b.transactionId && b.transactionId.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!matchesSearch) return false;
 
+    if (filterType === "PENDING") return b.bookingStatus === "PENDING";
     if (filterType === "ONLINE") return b.bookingType === "ONLINE";
     if (filterType === "OFFLINE") return b.bookingType === "OFFLINE";
     return true;
@@ -59,7 +61,6 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
       if (res.success) {
         setBookings([res.booking, ...bookings]);
         setShowOfflineModal(false);
-        // Reset form
         setOfflineCustomerName("");
         setOfflineCustomerPhone("");
         setOfflineNotes("");
@@ -82,6 +83,8 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
     }
   };
 
+  const pendingCount = bookings.filter((b) => b.bookingStatus === "PENDING").length;
+
   return (
     <div>
       {/* Top Action & Search Bar */}
@@ -91,7 +94,7 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
         <div className="flex-1 max-w-md">
           <input
             type="text"
-            placeholder="Search by customer name, phone, or HV-2026 #..."
+            placeholder="Search customer, phone, HV-2026 #, or UTR/Txn ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
@@ -106,6 +109,12 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
               className={`px-3 py-1.5 rounded-lg transition-colors ${filterType === "ALL" ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-xs" : "text-gray-500"}`}
             >
               All ({bookings.length})
+            </button>
+            <button
+              onClick={() => setFilterType("PENDING")}
+              className={`px-3 py-1.5 rounded-lg transition-colors ${filterType === "PENDING" ? "bg-amber-500 text-white font-bold shadow-xs" : "text-amber-600 font-bold"}`}
+            >
+              Pending ({pendingCount})
             </button>
             <button
               onClick={() => setFilterType("ONLINE")}
@@ -274,12 +283,12 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-500 uppercase">
-                  <th className="py-3 px-3">Booking Reference</th>
+                  <th className="py-3 px-3">Booking Ref</th>
                   <th className="py-3 px-3">Customer Info</th>
                   <th className="py-3 px-3">Date & Slot</th>
-                  <th className="py-3 px-3">Type</th>
-                  <th className="py-3 px-3">Amount & Payment</th>
-                  <th className="py-3 px-3">Booking Status Action</th>
+                  <th className="py-3 px-3">Amount & Payment Info</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3 text-right">Manager Verification Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -287,6 +296,13 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
                   <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
                     <td className="py-4 px-3 font-mono text-xs font-bold text-gray-900 dark:text-white">
                       {b.bookingNumber}
+                      <div className="mt-1">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                          b.bookingType === "ONLINE" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"
+                        }`}>
+                          {b.bookingType}
+                        </span>
+                      </div>
                       {b.notes && (
                         <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-1 line-clamp-1 max-w-xs font-sans">
                           📝 {b.notes}
@@ -308,17 +324,20 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
                     </td>
 
                     <td className="py-4 px-3">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                        b.bookingType === "ONLINE"
-                          ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
-                          : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                      }`}>
-                        {b.bookingType}
-                      </span>
-                    </td>
-
-                    <td className="py-4 px-3">
                       <div className="font-black text-rose-600 text-base">₹{b.totalAmount}</div>
+                      
+                      {/* Transaction / UTR ID display */}
+                      {(() => {
+                        const utr = b.transactionId || b.notes?.match(/\[UPI UTR:\s*([^\]]+)\]/)?.[1];
+                        return utr ? (
+                          <div className="mt-1 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-[11px] font-mono text-emerald-800 dark:text-emerald-300 font-bold inline-block">
+                            💳 UTR: {utr}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-gray-400 mt-0.5">No UTR logged</div>
+                        );
+                      })()}
+
                       <div className="mt-1">
                         <select
                           value={b.paymentStatus}
@@ -334,21 +353,48 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
                     </td>
 
                     <td className="py-4 px-3">
-                      <select
-                        value={b.bookingStatus}
-                        onChange={(e) => handleStatusChange(b.id, e.target.value, b.paymentStatus)}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-xl border ${
-                          b.bookingStatus === "CONFIRMED"
-                            ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                            : b.bookingStatus === "COMPLETED"
-                            ? "bg-blue-50 text-blue-800 border-blue-300"
-                            : "bg-rose-50 text-rose-800 border-rose-300"
-                        }`}
-                      >
-                        <option value="CONFIRMED">CONFIRMED</option>
-                        <option value="COMPLETED">COMPLETED</option>
-                        <option value="CANCELLED">CANCELLED</option>
-                      </select>
+                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                        b.bookingStatus === "CONFIRMED"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : b.bookingStatus === "PENDING"
+                          ? "bg-amber-100 text-amber-800 animate-pulse"
+                          : b.bookingStatus === "COMPLETED"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-rose-100 text-rose-800"
+                      }`}>
+                        {b.bookingStatus}
+                      </span>
+                    </td>
+
+                    {/* Quick Approve / Reject Actions */}
+                    <td className="py-4 px-3 text-right">
+                      {b.bookingStatus === "PENDING" ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleStatusChange(b.id, "CONFIRMED", "PAID")}
+                            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
+                          >
+                            Approve ✓
+                          </button>
+                          <button
+                            onClick={() => handleStatusChange(b.id, "CANCELLED", "REFUNDED")}
+                            className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs"
+                          >
+                            Reject ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <select
+                          value={b.bookingStatus}
+                          onChange={(e) => handleStatusChange(b.id, e.target.value, b.paymentStatus)}
+                          className="text-xs font-bold px-3 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                        >
+                          <option value="CONFIRMED">CONFIRMED</option>
+                          <option value="COMPLETED">COMPLETED</option>
+                          <option value="CANCELLED">CANCELLED (Release Slot)</option>
+                          <option value="PENDING">PENDING</option>
+                        </select>
+                      )}
                     </td>
                   </tr>
                 ))}

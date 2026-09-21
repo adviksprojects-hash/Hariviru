@@ -12,11 +12,11 @@ export default async function Header() {
 
                 {/* Brand Logo & Text */}
                 <Link href="/" className="flex items-center gap-3 group">
-                    <div className="h-14 w-14 overflow-hidden rounded-2xl bg-white p-0.5 shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0">
+                    <div className="h-14 w-auto max-w-[140px] rounded-xl bg-white p-1 shadow-xs border border-gray-200 dark:border-gray-700 flex items-center justify-center shrink-0">
                         <img
                             src="/logo.jpg"
                             alt="HaruViru Logo"
-                            className="h-20 w-20 max-w-none object-contain scale-135 group-hover:scale-145 transition-transform duration-300"
+                            className="h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
                         />
                     </div>
                     <div className="flex flex-col">

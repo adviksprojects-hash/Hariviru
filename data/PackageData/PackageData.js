@@ -84,5 +84,7 @@ export const contactInfo = {
   phone: "9762486649",
   whatsapp: "9762486649",
   ownerInstagram: "harshada_jadhav_23",
-  businessInstagram: "celebration_house_23",
+  ownerInstagram2: "vishal_sunil_ruke",
+  businessInstagram: "celebration_house_shikrapur",
+  hqMapUrl: "https://maps.app.goo.gl/rSEz6dXogSn3fPJ36",
 };

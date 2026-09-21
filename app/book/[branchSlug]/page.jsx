@@ -13,7 +13,9 @@ export async function generateMetadata({ params }) {
 
 export default async function BookingPage({ params, searchParams }) {
   const branchSlug = (await params).branchSlug;
-  const initialSlotId = (await searchParams)?.slotId || null;
+  const sp = await searchParams;
+  const initialSlotId = sp?.slotId || null;
+  const initialDate = sp?.date || null;
 
   const branch = await db.branch.findUnique({
     where: { slug: branchSlug },
@@ -52,7 +54,7 @@ export default async function BookingPage({ params, searchParams }) {
           </div>
 
           {/* Client Booking Form */}
-          <BookingFormClient branch={branch} initialSlotId={initialSlotId} />
+          <BookingFormClient branch={branch} initialSlotId={initialSlotId} initialDate={initialDate} />
         </div>
 
       </div>

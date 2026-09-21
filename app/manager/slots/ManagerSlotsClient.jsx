@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { createSlot, updateSlot, deleteSlot, toggleSlotStatus } from "@/lib/actions";
+import { useState, useEffect, useCallback } from "react";
+import {
+  createSlot,
+  updateSlot,
+  deleteSlot,
+  toggleSlotStatus,
+  toggleSlotDisabledDate,
+  getBranchSlotStatusForDate,
+} from "@/lib/actions";
 
 export default function ManagerSlotsClient({ branch, initialSlots }) {
-  const [slots, setSlots] = useState(initialSlots);
+  const todayStr = new Date().toISOString().split("T")[0];
 
-  // Add slot state (No price field mentioned)
+  const [slots, setSlots] = useState(initialSlots);
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [dateSlotStatuses, setDateSlotStatuses] = useState([]);
+  const [loadingDateSlots, setLoadingDateSlots] = useState(false);
+
+  // Add slot state
   const [title, setTitle] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("13:00");
@@ -20,6 +32,25 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Fetch date specific status whenever date or base slots change
+  const fetchDateStatuses = useCallback(async () => {
+    setLoadingDateSlots(true);
+    try {
+      const res = await getBranchSlotStatusForDate(branch.id, selectedDate);
+      if (res.success) {
+        setDateSlotStatuses(res.slots);
+      }
+    } catch (err) {
+      console.error("Failed to fetch date slot status:", err);
+    } finally {
+      setLoadingDateSlots(false);
+    }
+  }, [branch.id, selectedDate]);
+
+  useEffect(() => {
+    fetchDateStatuses();
+  }, [fetchDateStatuses]);
+
   const handleCreateSlot = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -31,12 +62,13 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
         title,
         startTime,
         endTime,
-        price: 0, // Default zero - pricing determined by selected package
+        price: 0,
       });
 
       if (res.success) {
         setSlots([...slots, res.slot]);
         setTitle("");
+        fetchDateStatuses();
       }
     } catch (err) {
       setError(err.message || "Failed to create slot.");
@@ -67,6 +99,7 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
       if (res.success) {
         setSlots(slots.map((s) => (s.id === editingSlot.id ? res.slot : s)));
         setEditingSlot(null);
+        fetchDateStatuses();
       }
     } catch (err) {
       alert("Failed to update slot: " + err.message);
@@ -81,31 +114,206 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
       const res = await deleteSlot(slotId);
       if (res.success) {
         setSlots(slots.filter((s) => s.id !== slotId));
+        fetchDateStatuses();
       }
     } catch (err) {
       alert("Failed to delete slot: " + err.message);
     }
   };
 
-  const handleToggleSlot = async (slotId, currentStatus) => {
+  const handleToggleSlotGlobal = async (slotId, currentStatus) => {
     try {
       const res = await toggleSlotStatus(slotId, !currentStatus);
       if (res.success) {
         setSlots(slots.map((s) => (s.id === slotId ? { ...s, isActive: !currentStatus } : s)));
+        fetchDateStatuses();
       }
     } catch (err) {
       alert("Failed to toggle slot: " + err.message);
     }
   };
 
+  const handleToggleDateDisable = async (slotId) => {
+    try {
+      const res = await toggleSlotDisabledDate(slotId, selectedDate);
+      if (res.success) {
+        fetchDateStatuses();
+      }
+    } catch (err) {
+      alert("Failed to update date availability: " + err.message);
+    }
+  };
+
+  // Quick date pill options (Today, Tomorrow, Day+2, Day+3)
+  const getDateOffsetPill = (offsetDays) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    const iso = d.toISOString().split("T")[0];
+    const label =
+      offsetDays === 0
+        ? "Today"
+        : offsetDays === 1
+        ? "Tomorrow"
+        : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    return { iso, label };
+  };
+
+  const datePills = [0, 1, 2, 3, 4, 5, 6].map(getDateOffsetPill);
+
+  // Summary counts for selected date
+  const bookedCount = dateSlotStatuses.filter((s) => s.isBooked).length;
+  const disabledCount = dateSlotStatuses.filter((s) => s.isDisabledForDate).length;
+  const availableCount = dateSlotStatuses.filter((s) => !s.isBooked && !s.isDisabledForDate).length;
+
   return (
     <div className="space-y-8">
-      {/* Current Slots List */}
+      
+      {/* Date Selector & Per-Date Slot Management Panel */}
+      <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 shadow-sm space-y-6">
+        <div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
+            <div>
+              <h2 className="text-xl font-black text-gray-900 dark:text-white">
+                📅 Date-Wise Slot Availability & Control
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Slots apply by default every day. Select a date below to view bookings or disable specific slots for that date.
+              </p>
+            </div>
+
+            {/* Date Input */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-500">Pick Date:</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          {/* Quick Date Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {datePills.map((p) => {
+              const isSelected = selectedDate === p.iso;
+              return (
+                <button
+                  key={p.iso}
+                  onClick={() => setSelectedDate(p.iso)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                    isSelected
+                      ? "bg-rose-600 text-white shadow-md shadow-rose-500/20"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200"
+                  }`}
+                >
+                  {p.label} ({p.iso})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Date Overview Summary Badge Bar */}
+        <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200/80 dark:border-gray-700 text-center">
+          <div>
+            <span className="text-[11px] font-bold text-gray-500 block uppercase">Available</span>
+            <span className="text-2xl font-black text-emerald-600">{availableCount} Slots</span>
+          </div>
+          <div>
+            <span className="text-[11px] font-bold text-gray-500 block uppercase">Booked</span>
+            <span className="text-2xl font-black text-rose-600">{bookedCount} Slots</span>
+          </div>
+          <div>
+            <span className="text-[11px] font-bold text-gray-500 block uppercase">Disabled for Date</span>
+            <span className="text-2xl font-black text-amber-600">{disabledCount} Slots</span>
+          </div>
+        </div>
+
+        {/* Date Slots List */}
+        <div>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
+            Slot Status for <span className="text-rose-600">{selectedDate}</span>:
+          </h3>
+
+          {loadingDateSlots ? (
+            <div className="py-8 text-center text-xs text-gray-400 font-semibold animate-pulse">
+              Loading date availability...
+            </div>
+          ) : dateSlotStatuses.length === 0 ? (
+            <div className="py-6 text-center text-xs text-gray-400">No active slots found.</div>
+          ) : (
+            <div className="space-y-3">
+              {dateSlotStatuses.map((st) => (
+                <div
+                  key={st.id}
+                  className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                    st.isBooked
+                      ? "bg-rose-50/70 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900"
+                      : st.isDisabledForDate
+                      ? "bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900 dark:text-white text-base">{st.title}</span>
+                      <span className="text-xs text-gray-500">({st.startTime} - {st.endTime})</span>
+                    </div>
+
+                    {st.isBooked && st.booking && (
+                      <div className="mt-1 text-xs font-semibold text-rose-700 dark:text-rose-400">
+                        🎟️ Booked by: <span className="font-bold">{st.booking.customerName}</span> ({st.booking.customerPhone}) [Ref: {st.booking.bookingNumber}]
+                      </div>
+                    )}
+
+                    {st.isDisabledForDate && !st.isBooked && (
+                      <div className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                        🚫 Disabled specifically for {selectedDate} by Manager
+                      </div>
+                    )}
+
+                    {!st.isBooked && !st.isDisabledForDate && (
+                      <div className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        🟢 Open for Booking on {selectedDate}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions for this specific date */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {st.isBooked ? (
+                      <span className="px-3 py-1 rounded-full bg-rose-200 text-rose-900 text-xs font-bold">
+                        Booked
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleToggleDateDisable(st.id)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                          st.isDisabledForDate
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            : "bg-amber-500 hover:bg-amber-600 text-white"
+                        }`}
+                      >
+                        {st.isDisabledForDate ? "Enable for Date ✓" : "Disable for Date 🚫"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Global Configured Slots List (Edit / Delete / Permanent Toggle) */}
       <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-200 dark:border-gray-800 shadow-xs">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Configured Time Slots</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          All Configured Time Slots ({branch.name})
+        </h2>
 
         {slots.length === 0 ? (
-          <p className="text-sm text-gray-500 py-6 text-center">No active slots configured for this branch.</p>
+          <p className="text-sm text-gray-500 py-6 text-center">No slots configured for this branch.</p>
         ) : (
           <div className="space-y-3">
             {slots.map((slot) => (
@@ -119,10 +327,12 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                    slot.isActive ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"
-                  }`}>
-                    {slot.isActive ? "Active" : "Disabled"}
+                  <span
+                    className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                      slot.isActive ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {slot.isActive ? "Active (All Days)" : "Disabled Globally"}
                   </span>
 
                   <button
@@ -133,10 +343,10 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
                   </button>
 
                   <button
-                    onClick={() => handleToggleSlot(slot.id, slot.isActive)}
+                    onClick={() => handleToggleSlotGlobal(slot.id, slot.isActive)}
                     className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
-                    {slot.isActive ? "Disable" : "Enable"}
+                    {slot.isActive ? "Disable Globally" : "Enable Globally"}
                   </button>
 
                   <button
@@ -166,7 +376,9 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Slot Title *</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Slot Title *
+                </label>
                 <input
                   type="text"
                   required
@@ -178,7 +390,9 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Start Time *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Start Time *
+                  </label>
                   <input
                     type="time"
                     required
@@ -189,7 +403,9 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">End Time *</label>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    End Time *
+                  </label>
                   <input
                     type="time"
                     required
@@ -221,10 +437,12 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
         </div>
       )}
 
-      {/* Add New Slot Form (Without Price Field) */}
+      {/* Add New Slot Form */}
       <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-200 dark:border-gray-800 shadow-xs">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">+ Add New Celebration Slot</h2>
-        <p className="text-xs text-gray-500 mb-6">Create a new time window for {branch.name} celebrations (e.g. Evening Party 07:00 PM - 10:00 PM).</p>
+        <p className="text-xs text-gray-500 mb-6">
+          Create a new daily time window for {branch.name} celebrations (e.g. Evening Party 07:00 PM - 10:00 PM).
+        </p>
 
         {error && (
           <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold mb-4">

@@ -44,6 +44,7 @@ export default function AdminBranchesClient({ initialBranches }) {
     mapUrl: "",
     instagramHandle: "celebration_house_23",
     whatsapp: "9762486649",
+    upiId: "9762486649@ybl",
     description: "",
     bannerImage: SYSTEM_SAMPLE_IMAGES[0],
     galleryImages: [SYSTEM_SAMPLE_IMAGES[1], SYSTEM_SAMPLE_IMAGES[2]],
@@ -62,6 +63,7 @@ export default function AdminBranchesClient({ initialBranches }) {
       mapUrl: "",
       instagramHandle: "celebration_house_23",
       whatsapp: "9762486649",
+      upiId: "9762486649@ybl",
       description: "",
       bannerImage: SYSTEM_SAMPLE_IMAGES[0],
       galleryImages: [SYSTEM_SAMPLE_IMAGES[1], SYSTEM_SAMPLE_IMAGES[2]],
@@ -135,6 +137,7 @@ export default function AdminBranchesClient({ initialBranches }) {
         mapUrl: formData.mapUrl || `https://maps.google.com/?q=${encodeURIComponent(formData.address + " " + formData.city)}`,
         instagramHandle: formData.instagramHandle || "celebration_house_23",
         whatsapp: formData.whatsapp || formData.phone.replace(/[^0-9]/g, ""),
+        upiId: formData.upiId || "9762486649@ybl",
         description: formData.description,
         images: allImages,
         amenities: formData.amenities,
@@ -165,6 +168,7 @@ export default function AdminBranchesClient({ initialBranches }) {
       mapUrl: branch.mapUrl || "",
       instagramHandle: branch.instagramHandle || "celebration_house_23",
       whatsapp: branch.whatsapp || "",
+      upiId: branch.upiId || "9762486649@ybl",
       description: branch.description || "",
       bannerImage: branch.images?.[0] || SYSTEM_SAMPLE_IMAGES[0],
       galleryImages: branch.images?.slice(1) || [SYSTEM_SAMPLE_IMAGES[1]],
@@ -193,6 +197,7 @@ export default function AdminBranchesClient({ initialBranches }) {
         mapUrl: formData.mapUrl,
         instagramHandle: formData.instagramHandle,
         whatsapp: formData.whatsapp,
+        upiId: formData.upiId,
         description: formData.description,
         images: allImages,
         amenities: formData.amenities,
@@ -351,7 +356,7 @@ export default function AdminBranchesClient({ initialBranches }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Phone Number *</label>
                   <input
@@ -379,10 +384,22 @@ export default function AdminBranchesClient({ initialBranches }) {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Instagram Handle</label>
                   <input
                     type="text"
-                    placeholder="celebration_house_23"
+                    placeholder="celebration_house_shikrapur"
                     value={formData.instagramHandle}
                     onChange={(e) => setFormData({ ...formData, instagramHandle: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">UPI ID for QR Code *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="9762486649@ybl"
+                    value={formData.upiId}
+                    onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-xs font-mono font-bold text-rose-600"
                   />
                 </div>
               </div>

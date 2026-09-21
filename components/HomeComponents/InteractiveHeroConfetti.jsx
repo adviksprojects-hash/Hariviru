@@ -207,8 +207,8 @@ export default function InteractiveHeroConfetti({ children }) {
       />
 
       {/* Interactive Helper Floating Badge */}
-      <div className="absolute top-4 right-4 z-20 hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-rose-300 dark:border-rose-800 text-[11px] font-bold text-rose-700 dark:text-rose-300 shadow-md">
-        <span>🎉 Move cursor or click to shoot confetti ribbons!</span>
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-rose-300 dark:border-rose-800 text-[11px] font-bold text-rose-700 dark:text-rose-300 shadow-md">
+        <span>🎉 Tap screen or move cursor to shoot confetti!</span>
         {clickCount > 0 && <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white font-black">{clickCount} Pops!</span>}
       </div>
 

@@ -11,6 +11,11 @@ const inter = Inter({
 export const metadata = {
   title: "HaruViru Celebration House | Make Your Special Day Unforgettable",
   description: "Book 1hr private celebration packages with AC Hall, 4K Theater, Dolby Audio, custom cake & decorations across all HaruViru franchise branches.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }) {

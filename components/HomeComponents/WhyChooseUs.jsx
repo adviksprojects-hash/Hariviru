@@ -1,6 +1,11 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 
 export default function WhyChooseUs() {
+  const [activeReasonId, setActiveReasonId] = useState("spaces");
+
   const reasons = [
     {
       id: "spaces",
@@ -60,35 +65,58 @@ export default function WhyChooseUs() {
           </p>
         </div>
 
-        {/* 5 Points Grid */}
+        {/* 5 Points Grid with Mobile Touch Glow Support */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {reasons.map((item, index) => (
-            <div
-              key={item.id}
-              className={`p-8 rounded-3xl bg-gray-900/80 border border-gray-800 hover:border-gray-700 shadow-xl transition-all duration-300 hover:-translate-y-1.5 group flex flex-col justify-between ${
-                index === 0 ? "lg:col-span-2" : ""
-              }`}
-            >
-              <div>
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-tr ${item.color} text-white flex items-center justify-center text-2xl shadow-lg mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  {item.icon}
+          {reasons.map((item, index) => {
+            const isActive = activeReasonId === item.id;
+            return (
+              <div
+                key={item.id}
+                onClick={() => setActiveReasonId(item.id)}
+                onTouchStart={() => setActiveReasonId(item.id)}
+                className={`p-8 rounded-3xl bg-gray-900/80 border shadow-xl transition-all duration-300 group flex flex-col justify-between cursor-pointer select-none ${
+                  index === 0 ? "lg:col-span-2" : ""
+                } ${
+                  isActive
+                    ? "border-rose-500/80 shadow-rose-500/20 scale-[1.01]"
+                    : "border-gray-800 hover:border-gray-700 hover:-translate-y-1"
+                }`}
+              >
+                <div>
+                  <div
+                    className={`w-14 h-14 rounded-2xl bg-gradient-to-tr ${item.color} text-white flex items-center justify-center text-2xl shadow-lg mb-6 transition-transform duration-300 ${
+                      isActive ? "scale-115" : "group-hover:scale-110"
+                    }`}
+                  >
+                    {item.icon}
+                  </div>
+
+                  <h3
+                    className={`text-2xl font-bold transition-colors ${
+                      isActive ? "text-rose-400" : "text-white group-hover:text-rose-400"
+                    }`}
+                  >
+                    {item.title}
+                  </h3>
+
+                  <p className="mt-3 text-sm text-gray-400 leading-relaxed">
+                    {item.description}
+                  </p>
                 </div>
 
-                <h3 className="text-2xl font-bold text-white group-hover:text-rose-400 transition-colors">
-                  {item.title}
-                </h3>
-
-                <p className="mt-3 text-sm text-gray-400 leading-relaxed">
-                  {item.description}
-                </p>
+                <div className="mt-6 pt-4 border-t border-gray-800/80 flex items-center justify-between text-xs font-bold text-gray-500">
+                  <span>0{index + 1}</span>
+                  <span
+                    className={`text-rose-500 transition-opacity ${
+                      isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    HaruViru Guarantee ✓
+                  </span>
+                </div>
               </div>
-
-              <div className="mt-6 pt-4 border-t border-gray-800/80 flex items-center justify-between text-xs font-bold text-gray-500">
-                <span>0{index + 1}</span>
-                <span className="text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">HaruViru Guarantee ✓</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Bottom CTA Banner */}

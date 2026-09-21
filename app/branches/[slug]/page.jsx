@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/prisma";
 import PackageShowcase from "@/components/PackageComponents/PackageShowcase";
 import BranchImageSlider from "@/components/BranchComponents/BranchImageSlider";
+import BranchAvailableSlotsClient from "@/components/BranchComponents/BranchAvailableSlotsClient";
 
 export async function generateMetadata({ params }) {
   const slug = (await params).slug;
@@ -189,33 +190,9 @@ export default async function BranchDetailPage({ params }) {
             </div>
           </div>
 
-          {/* Time Slots Sidebar */}
-          <div className="space-y-6">
-            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md p-6 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-md sticky top-28">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Available Time Slots</h3>
-              <p className="text-xs text-gray-500 mb-6">Pick a slot to reserve your celebration date.</p>
-
-              <div className="space-y-3">
-                {branch.slots.map((slot) => (
-                  <div
-                    key={slot.id}
-                    className="p-4 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-rose-500 transition-colors flex items-center justify-between bg-white dark:bg-gray-900"
-                  >
-                    <div>
-                      <div className="font-bold text-gray-900 dark:text-white text-sm">{slot.title}</div>
-                      <div className="text-xs text-gray-500">🕒 {slot.startTime} - {slot.endTime}</div>
-                    </div>
-
-                    <Link
-                      href={`/book/${branch.slug}?slotId=${slot.id}`}
-                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors"
-                    >
-                      Book Slot
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* Time Slots Sidebar with Date Selector */}
+          <div className="space-y-6 sticky top-28">
+            <BranchAvailableSlotsClient branchId={branch.id} branchSlug={branch.slug} />
           </div>
 
         </div>

@@ -71,6 +71,7 @@ model Branch {
   mapUrl          String?
   instagramHandle String?
   whatsapp        String?
+  upiId           String?   @default("9762486649@ybl")
   isActive        Boolean   @default(true)
   
   managers        User[]    @relation("BranchManager")
@@ -82,18 +83,29 @@ model Branch {
 }
 
 model Slot {
-  id        String    @id @default(uuid())
-  branchId  String
-  branch    Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  title     String
-  startTime String
-  endTime   String
-  price     Float
-  isActive  Boolean   @default(true)
+  id            String             @id @default(uuid())
+  branchId      String
+  branch        Branch             @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  title         String
+  startTime     String
+  endTime       String
+  price         Float
+  isActive      Boolean            @default(true)
   
-  bookings  Booking[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  bookings      Booking[]
+  disabledDates SlotDisabledDate[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model SlotDisabledDate {
+  id        String   @id @default(uuid())
+  slotId    String
+  slot      Slot     @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  date      String
+  createdAt DateTime @default(now())
+
+  @@unique([slotId, date])
 }
 
 model Booking {
@@ -112,8 +124,9 @@ model Booking {
   bookingDate   DateTime
   totalAmount   Float
   paymentStatus PaymentStatus @default(PENDING)
-  bookingStatus BookingStatus @default(CONFIRMED)
+  bookingStatus BookingStatus @default(PENDING)
   bookingType   BookingType   @default(ONLINE)
+  transactionId String?
   notes         String?
   
   createdAt     DateTime      @default(now())

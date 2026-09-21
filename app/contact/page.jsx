@@ -56,14 +56,19 @@ export default function ContactPage() {
           </a>
 
           {/* Headquarters Location: Shikrapur Pune */}
-          <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-6 rounded-3xl border border-gray-200 dark:border-gray-800 text-center shadow-xs">
+          <a
+            href={contactInfo.hqMapUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-6 rounded-3xl border border-gray-200 dark:border-gray-800 text-center hover:border-rose-500 transition-colors shadow-xs group"
+          >
             <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950 flex items-center justify-center mx-auto mb-3 shadow-xs">
-              <img src="/icons/map.png" alt="Map Pin Icon" className="w-8 h-8 object-contain" />
+              <img src="/icons/map.png" alt="Map Pin Icon" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform" />
             </div>
             <h3 className="font-bold text-gray-900 dark:text-white">Headquarters</h3>
-            <p className="text-sm font-bold text-gray-900 dark:text-white mt-1">Shikrapur, Pune</p>
-            <p className="text-xs text-gray-400 mt-0.5">Maharashtra, India</p>
-          </div>
+            <p className="text-sm font-bold text-rose-600 mt-1">Shikrapur, Pune</p>
+            <p className="text-xs text-gray-400 mt-0.5">Click for Google Maps Directions 📍</p>
+          </a>
 
         </div>
 

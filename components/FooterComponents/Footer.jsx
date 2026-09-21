@@ -7,14 +7,14 @@ export default function Footer() {
       <div className="container mx-auto px-4 md:px-8 max-w-6xl">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           
-          {/* Brand Info & Bigger Cropped Logo */}
+          {/* Brand Info & Full Logo */}
           <div className="md:col-span-1 space-y-4">
             <Link href="/" className="inline-flex items-center gap-3 group">
-              <div className="h-16 w-16 overflow-hidden rounded-2xl bg-white p-0.5 shadow-md flex items-center justify-center shrink-0">
+              <div className="h-16 w-auto max-w-[160px] rounded-xl bg-white p-1 shadow-md flex items-center justify-center shrink-0">
                 <img
                   src="/logo.jpg"
                   alt="HaruViru Logo"
-                  className="h-24 w-24 max-w-none object-contain scale-135 group-hover:scale-145 transition-transform duration-300"
+                  className="h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
               <div className="flex flex-col">
@@ -88,15 +88,25 @@ export default function Footer() {
               </div>
 
               <div>
-                <span className="text-gray-400 block">Instagram Pages:</span>
+                <span className="text-gray-400 block">Instagram Handles:</span>
                 <div className="flex flex-col gap-1 mt-1 font-medium">
-                  <a href={`https://instagram.com/${contactInfo.businessInstagram}`} target="_blank" rel="noopener noreferrer" className="hover:text-amber-400">
+                  <a href={`https://instagram.com/${contactInfo.businessInstagram}`} target="_blank" rel="noopener noreferrer" className="hover:text-amber-400 flex items-center gap-1">
                     📸 @{contactInfo.businessInstagram}
                   </a>
-                  <a href={`https://instagram.com/${contactInfo.ownerInstagram}`} target="_blank" rel="noopener noreferrer" className="hover:text-amber-400">
-                    👑 Owner: @{contactInfo.ownerInstagram}
+                  <a href={`https://instagram.com/${contactInfo.ownerInstagram}`} target="_blank" rel="noopener noreferrer" className="hover:text-amber-400 flex items-center gap-1">
+                    👑 @{contactInfo.ownerInstagram}
+                  </a>
+                  <a href={`https://instagram.com/${contactInfo.ownerInstagram2}`} target="_blank" rel="noopener noreferrer" className="hover:text-amber-400 flex items-center gap-1">
+                    👑 @{contactInfo.ownerInstagram2}
                   </a>
                 </div>
+              </div>
+
+              <div className="pt-1">
+                <span className="text-gray-400 block">Headquarters:</span>
+                <a href={contactInfo.hqMapUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-rose-400 hover:underline flex items-center gap-1 mt-0.5">
+                  📍 Shikrapur, Pune (Google Maps)
+                </a>
               </div>
             </div>
           </div>
@@ -106,8 +116,10 @@ export default function Footer() {
         {/* Bottom Copyright */}
         <div className="pt-8 border-t border-gray-900 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-4">
           <p>© {new Date().getFullYear()} HaruViru Celebration House. All rights reserved.</p>
-          <p className="flex items-center gap-1">
+          <p className="flex items-center gap-1.5 flex-wrap justify-center sm:justify-end">
             <span>Crafted with ❤️ for All Franchise Branches</span>
+            <span>•</span>
+            <span className="font-semibold text-gray-400">Developed by ADVIKS Softech</span>
           </p>
         </div>
       </div>
