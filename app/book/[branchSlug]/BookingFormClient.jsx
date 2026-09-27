@@ -37,12 +37,18 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
       if (res.success) {
         setSlotStatuses(res.slots);
 
-        // Auto select first available slot if current selection is invalid for this date
+        // Auto select first available slot if current selection is invalid or time passed for this date
         const currentSlotObj = res.slots.find((s) => s.id === selectedSlotId);
-        const isCurrentAvailable = currentSlotObj && !currentSlotObj.isBooked && !currentSlotObj.isDisabledForDate;
+        const isCurrentAvailable =
+          currentSlotObj &&
+          !currentSlotObj.isBooked &&
+          !currentSlotObj.isDisabledForDate &&
+          !currentSlotObj.isTimePassed;
 
         if (!isCurrentAvailable) {
-          const firstAvail = res.slots.find((s) => !s.isBooked && !s.isDisabledForDate);
+          const firstAvail = res.slots.find(
+            (s) => !s.isBooked && !s.isDisabledForDate && !s.isTimePassed
+          );
           if (firstAvail) {
             setSelectedSlotId(firstAvail.id);
           } else {
@@ -91,6 +97,11 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
       setError("Please fill in your name and WhatsApp phone number.");
       return;
     }
+    const cleanPhone = customerPhone.replace(/[^0-9]/g, "");
+    if (cleanPhone.length !== 10) {
+      setError("WhatsApp Mobile Number must be exactly 10 digits (e.g., 9876543210).");
+      return;
+    }
     setError(null);
     setShowPaymentStep(true);
   };
@@ -103,6 +114,13 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
 
   const handleConfirmBookingWithPayment = async (e) => {
     e.preventDefault();
+
+    const cleanTxn = transactionId.replace(/[^0-9]/g, "");
+    if (cleanTxn.length !== 12) {
+      setError("UPI Transaction ID / UTR Ref Number must be exactly 12 digits.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -261,9 +279,56 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
               </div>
             )}
 
-            {/* QR Code Container */}
-            <div className="bg-gradient-to-b from-rose-50/50 to-amber-50/50 dark:from-gray-800 dark:to-gray-800/80 p-6 rounded-3xl border border-rose-200/80 dark:border-gray-700 text-center space-y-4 mb-6">
-              <div className="w-56 h-56 bg-white p-3 rounded-2xl mx-auto shadow-md border border-gray-200 flex items-center justify-center">
+            {/* QR Code Container & Mobile Payment Options */}
+            <div className="bg-gradient-to-b from-rose-50/50 to-amber-50/50 dark:from-gray-800 dark:to-gray-800/80 p-5 sm:p-6 rounded-3xl border border-rose-200/80 dark:border-gray-700 text-center space-y-4 mb-6">
+              
+              {/* Mobile Direct Pay Button (For phone users) */}
+              <div className="space-y-2">
+                <a
+                  href={upiQrData}
+                  className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-purple-600 via-rose-600 to-amber-600 hover:from-purple-700 hover:to-amber-700 text-white font-black text-sm shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 transition-all transform active:scale-95"
+                >
+                  <span className="text-lg">📱</span>
+                  <span>Tap to Pay ₹{totalPrice} via UPI App</span>
+                </a>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 block text-center font-medium">
+                  ⚡ Mobile Users: Tap button above to launch PhonePe, Google Pay, or Paytm directly!
+                </span>
+              </div>
+
+              {/* Direct UPI App Shortcuts */}
+              <div className="grid grid-cols-3 gap-2 text-xs pt-1">
+                <a
+                  href={upiQrData}
+                  className="p-2.5 rounded-xl border border-purple-200 dark:border-purple-800 bg-white dark:bg-gray-900 text-purple-900 dark:text-purple-300 font-bold flex flex-col items-center justify-center gap-1 hover:bg-purple-50 dark:hover:bg-gray-800 transition-colors shadow-xs"
+                >
+                  <span className="text-base">🟣</span>
+                  <span>PhonePe</span>
+                </a>
+                <a
+                  href={upiQrData}
+                  className="p-2.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-900 text-blue-900 dark:text-blue-300 font-bold flex flex-col items-center justify-center gap-1 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors shadow-xs"
+                >
+                  <span className="text-base">🔵</span>
+                  <span>Google Pay</span>
+                </a>
+                <a
+                  href={upiQrData}
+                  className="p-2.5 rounded-xl border border-sky-200 dark:border-sky-800 bg-white dark:bg-gray-900 text-sky-900 dark:text-sky-300 font-bold flex flex-col items-center justify-center gap-1 hover:bg-sky-50 dark:hover:bg-gray-800 transition-colors shadow-xs"
+                >
+                  <span className="text-base">🟡</span>
+                  <span>Paytm</span>
+                </a>
+              </div>
+
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+                <span className="flex-shrink mx-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">OR SCAN QR CODE (DESKTOP)</span>
+                <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+              </div>
+
+              {/* QR Code Container (Desktop users) */}
+              <div className="w-48 h-48 sm:w-56 sm:h-56 bg-white p-3 rounded-2xl mx-auto shadow-md border border-gray-200 flex items-center justify-center">
                 <img
                   src={qrCodeUrl}
                   alt="UPI Payment QR Code"
@@ -293,19 +358,25 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
 
             <form onSubmit={handleConfirmBookingWithPayment} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-800 dark:text-gray-200 mb-1">
-                  Enter UPI Transaction ID / UTR Ref Number *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-gray-800 dark:text-gray-200">
+                    Enter UPI Transaction ID / UTR Ref Number *
+                  </label>
+                  <span className={`text-[11px] font-mono font-bold ${transactionId.length === 12 ? "text-emerald-600" : "text-amber-600"}`}>
+                    {transactionId.length}/12 Digits
+                  </span>
+                </div>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. 426890123456 or UTR Number"
+                  maxLength={12}
+                  placeholder="e.g. 426890123456 (Exactly 12 Digits)"
                   value={transactionId}
-                  onChange={(e) => setTransactionId(e.target.value)}
+                  onChange={(e) => setTransactionId(e.target.value.replace(/[^0-9]/g, "").slice(0, 12))}
                   className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-sm font-mono focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
                 />
                 <span className="text-[11px] text-gray-400 block mt-1">
-                  Found in your GPay / PhonePe / Paytm payment receipt after completing payment.
+                  Found in your GPay / PhonePe / Paytm receipt (12-digit UPI reference number).
                 </span>
               </div>
 
@@ -424,7 +495,7 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {slotStatuses.map((s) => {
-                  const isAvailable = !s.isBooked && !s.isDisabledForDate;
+                  const isAvailable = !s.isBooked && !s.isDisabledForDate && !s.isTimePassed;
                   const isSelected = selectedSlotId === s.id;
 
                   return (
@@ -453,6 +524,10 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
                           }`}
                         >
                           {isSelected ? "Selected ✓" : "Available"}
+                        </span>
+                      ) : s.isTimePassed ? (
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                          ⏰ Time Passed
                         </span>
                       ) : s.isBooked ? (
                         <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-100 text-rose-800">
@@ -520,16 +595,22 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                Phone Number (WhatsApp) *
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400">
+                  Phone Number (WhatsApp) *
+                </label>
+                <span className={`text-[11px] font-mono font-bold ${customerPhone.length === 10 ? "text-emerald-600" : "text-amber-600"}`}>
+                  {customerPhone.length}/10 Digits
+                </span>
+              </div>
               <input
                 type="tel"
                 required
+                maxLength={10}
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="+91 97624 86649"
-                className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
+                onChange={(e) => setCustomerPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+                placeholder="9876543210 (10 Digits)"
+                className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden font-mono"
               />
             </div>
           </div>
