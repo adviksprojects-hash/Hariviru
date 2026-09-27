@@ -104,6 +104,9 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
     }
     setError(null);
     setShowPaymentStep(true);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handleCopyUpi = () => {

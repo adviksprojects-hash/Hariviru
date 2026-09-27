@@ -105,7 +105,7 @@ export default function BranchAvailableSlotsClient({ branchId, branchSlug }) {
       ) : (
         <div className="space-y-3">
           {slots.map((s) => {
-            const isAvailable = !s.isBooked && !s.isDisabledForDate;
+            const isAvailable = !s.isBooked && !s.isDisabledForDate && !s.isTimePassed;
             return (
               <div
                 key={s.id}
@@ -127,6 +127,10 @@ export default function BranchAvailableSlotsClient({ branchId, branchSlug }) {
                   >
                     Book Slot →
                   </Link>
+                ) : s.isTimePassed ? (
+                  <span className="px-3 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 text-xs font-bold">
+                    ⏰ Time Passed
+                  </span>
                 ) : s.isBooked ? (
                   <span className="px-3 py-1.5 rounded-xl bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 text-xs font-bold">
                     🔴 Booked
