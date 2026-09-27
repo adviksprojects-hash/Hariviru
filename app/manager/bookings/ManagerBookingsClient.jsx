@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createOfflineBooking, updateBookingStatus } from "@/lib/actions";
+import { buildWhatsAppConfirmationText } from "@/lib/whatsapp";
 
 export default function ManagerBookingsClient({ branch, initialBookings }) {
   const [bookings, setBookings] = useState(initialBookings);
@@ -21,6 +22,45 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
   const [offlineAmount, setOfflineAmount] = useState("");
   const [offlineNotes, setOfflineNotes] = useState("");
   const [offlinePaymentStatus, setOfflinePaymentStatus] = useState("PAID");
+
+  const getWaLink = (booking) => {
+    const { waLink } = buildWhatsAppConfirmationText(booking, branch);
+    return waLink;
+  };
+
+  const handleApproveAndSendWhatsApp = async (booking) => {
+    try {
+      const res = await updateBookingStatus(booking.id, "CONFIRMED", "PAID");
+      if (res.success) {
+        setBookings(bookings.map((b) => (b.id === booking.id ? res.booking : b)));
+        
+        if (res.waResult?.success) {
+          alert("🎉 Booking APPROVED & Automated WhatsApp Confirmation Message Sent Successfully!");
+        } else {
+          // If automated API message had an error or token issue, use wa.me direct web link fallback
+          if (res.waResult?.data?.error) {
+            const metaErr = res.waResult.data.error;
+            console.warn("Meta API Error:", metaErr);
+          }
+          const waLink = getWaLink(booking);
+          window.open(waLink, "_blank");
+        }
+      }
+    } catch (err) {
+      alert("Error approving booking: " + err.message);
+    }
+  };
+
+  const handleStatusChange = async (bookingId, newBookingStatus, newPaymentStatus) => {
+    try {
+      const res = await updateBookingStatus(bookingId, newBookingStatus, newPaymentStatus);
+      if (res.success) {
+        setBookings(bookings.map((b) => (b.id === bookingId ? res.booking : b)));
+      }
+    } catch (err) {
+      alert("Error updating booking status: " + err.message);
+    }
+  };
 
   const filteredBookings = bookings.filter((b) => {
     const matchesSearch =
@@ -69,17 +109,6 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
       setError(err.message || "Failed to create offline booking.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleStatusChange = async (bookingId, newBookingStatus, newPaymentStatus) => {
-    try {
-      const res = await updateBookingStatus(bookingId, newBookingStatus, newPaymentStatus);
-      if (res.success) {
-        setBookings(bookings.map((b) => (b.id === bookingId ? res.booking : b)));
-      }
-    } catch (err) {
-      alert("Error updating booking status: " + err.message);
     }
   };
 
@@ -366,34 +395,45 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
                       </span>
                     </td>
 
-                    {/* Quick Approve / Reject Actions */}
+                    {/* Quick Approve & Send WhatsApp / Reject Actions */}
                     <td className="py-4 px-3 text-right">
                       {b.bookingStatus === "PENDING" ? (
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2 flex-wrap sm:flex-nowrap">
                           <button
-                            onClick={() => handleStatusChange(b.id, "CONFIRMED", "PAID")}
-                            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
+                            onClick={() => handleApproveAndSendWhatsApp(b)}
+                            title="Approve booking and open pre-filled WhatsApp confirmation message to send to customer"
+                            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 shrink-0"
                           >
-                            Approve ✓
+                            <span>Approve & WhatsApp 💬</span>
                           </button>
                           <button
                             onClick={() => handleStatusChange(b.id, "CANCELLED", "REFUNDED")}
-                            className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs"
+                            className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs"
                           >
                             Reject ✕
                           </button>
                         </div>
                       ) : (
-                        <select
-                          value={b.bookingStatus}
-                          onChange={(e) => handleStatusChange(b.id, e.target.value, b.paymentStatus)}
-                          className="text-xs font-bold px-3 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-                        >
-                          <option value="CONFIRMED">CONFIRMED</option>
-                          <option value="COMPLETED">COMPLETED</option>
-                          <option value="CANCELLED">CANCELLED (Release Slot)</option>
-                          <option value="PENDING">PENDING</option>
-                        </select>
+                        <div className="flex items-center justify-end gap-2">
+                          <a
+                            href={getWaLink(b)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold text-xs hover:bg-emerald-200 transition-colors inline-flex items-center gap-1"
+                          >
+                            <span>💬 Send WhatsApp</span>
+                          </a>
+                          <select
+                            value={b.bookingStatus}
+                            onChange={(e) => handleStatusChange(b.id, e.target.value, b.paymentStatus)}
+                            className="text-xs font-bold px-2.5 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                          >
+                            <option value="CONFIRMED">CONFIRMED</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="CANCELLED">CANCELLED (Release Slot)</option>
+                            <option value="PENDING">PENDING</option>
+                          </select>
+                        </div>
                       )}
                     </td>
                   </tr>
