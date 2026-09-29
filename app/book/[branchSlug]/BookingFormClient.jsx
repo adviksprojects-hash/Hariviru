@@ -5,10 +5,27 @@ import Link from "next/link";
 import { createOnlineBooking, getBranchSlotStatusForDate } from "@/lib/actions";
 import { celebrationPackages, packageAddOns } from "@/data/PackageData/PackageData";
 
-export default function BookingFormClient({ branch, initialSlotId, initialDate }) {
+export default function BookingFormClient({
+  branch,
+  halls = [],
+  packages = [],
+  addOns = [],
+  initialSlotId,
+  initialDate,
+  initialHallId,
+}) {
   const todayStr = new Date().toISOString().split("T")[0];
 
-  const [selectedPackageId, setSelectedPackageId] = useState("pkg-1");
+  const activePackages = packages && packages.length > 0 ? packages : celebrationPackages;
+  const activeHalls = halls && halls.length > 0 ? halls : [{ id: null, name: "Hall 1" }];
+  const activeAddOns = addOns && addOns.length > 0 ? addOns : packageAddOns;
+
+  const [selectedHallId, setSelectedHallId] = useState(
+    initialHallId || (activeHalls[0] ? activeHalls[0].id : null)
+  );
+  const [selectedPackageId, setSelectedPackageId] = useState(
+    activePackages[0] ? activePackages[0].id : "pkg-1"
+  );
   const [bookingDate, setBookingDate] = useState(initialDate || todayStr);
   const [slotStatuses, setSlotStatuses] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(true);
@@ -28,16 +45,17 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
   const [bookingResult, setBookingResult] = useState(null);
 
   const branchUpiId = branch.upiId || "9762486649@ybl";
+  const selectedHall = activeHalls.find((h) => h.id === selectedHallId) || activeHalls[0];
 
-  // Fetch slot status for the chosen date
+  // Fetch slot status for the chosen date and hall
   const fetchSlotStatuses = useCallback(async () => {
     setLoadingSlots(true);
     try {
-      const res = await getBranchSlotStatusForDate(branch.id, bookingDate);
+      const res = await getBranchSlotStatusForDate(branch.id, bookingDate, selectedHallId);
       if (res.success) {
         setSlotStatuses(res.slots);
 
-        // Auto select first available slot if current selection is invalid or time passed for this date
+        // Auto select first available slot if current selection is invalid or time passed for this date & hall
         const currentSlotObj = res.slots.find((s) => s.id === selectedSlotId);
         const isCurrentAvailable =
           currentSlotObj &&
@@ -57,27 +75,28 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
         }
       }
     } catch (err) {
-      console.error("Failed to load slot statuses for date:", err);
+      console.error("Failed to load slot statuses for date/hall:", err);
     } finally {
       setLoadingSlots(false);
     }
-  }, [branch.id, bookingDate, selectedSlotId]);
+  }, [branch.id, bookingDate, selectedHallId, selectedSlotId]);
 
   useEffect(() => {
     fetchSlotStatuses();
-  }, [bookingDate]);
+  }, [bookingDate, selectedHallId]);
 
   // Selected package details
-  const selectedPackage = celebrationPackages.find((p) => p.id === selectedPackageId) || celebrationPackages[0];
+  const selectedPackage =
+    activePackages.find((p) => p.id === selectedPackageId) || activePackages[0];
   const selectedSlot = slotStatuses.find((s) => s.id === selectedSlotId);
 
   // Calculate total price: Package Offer Price + Selected Add-Ons
   const addOnsTotal = selectedAddOns.reduce((sum, addonId) => {
-    const addon = packageAddOns.find((a) => a.id === addonId);
+    const addon = activeAddOns.find((a) => a.id === addonId);
     return sum + (addon ? addon.price : 0);
   }, 0);
 
-  const totalPrice = selectedPackage.offerPrice + addOnsTotal;
+  const totalPrice = (selectedPackage.offerPrice || 1499) + addOnsTotal;
 
   const toggleAddOn = (addonId) => {
     if (selectedAddOns.includes(addonId)) {
@@ -90,7 +109,7 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
   const handleProceedToPayment = (e) => {
     e.preventDefault();
     if (!selectedSlotId) {
-      setError("Please select an available time slot for your chosen date.");
+      setError("Please select an available time slot for your chosen date & hall.");
       return;
     }
     if (!customerName || !customerPhone) {
@@ -128,17 +147,21 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
     setError(null);
 
     const addOnNames = selectedAddOns
-      .map((id) => packageAddOns.find((a) => a.id === id)?.name)
+      .map((id) => activeAddOns.find((a) => a.id === id)?.name)
       .filter(Boolean)
       .join(", ");
 
-    const combinedNotes = `[Package: ${selectedPackage.badge} (${selectedPackage.name})] ${
+    const hallLabel = selectedHall ? selectedHall.name : "Hall 1";
+
+    const combinedNotes = `[Hall: ${hallLabel}] [Package: ${selectedPackage.badge || "Package"} (${selectedPackage.name})] ${
       addOnNames ? `[Add-Ons: ${addOnNames}] ` : ""
     }${notes ? `[Notes: ${notes}]` : ""}`;
 
     try {
       const res = await createOnlineBooking({
         branchId: branch.id,
+        hallId: selectedHall?.id || null,
+        hallName: selectedHall?.name || "Hall 1",
         slotId: selectedSlotId,
         bookingDate,
         customerName,
@@ -215,6 +238,12 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
             <span className="text-gray-500 font-semibold">Franchise Branch:</span>
             <span className="font-bold text-gray-900 dark:text-white">{branch.name}</span>
           </div>
+          {selectedHall && (
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-semibold">Hall Allocated:</span>
+              <span className="font-bold text-rose-600">{selectedHall.name}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-gray-500 font-semibold">Celebration Date:</span>
             <span className="font-bold text-gray-900 dark:text-white">{bookingDate}</span>
@@ -412,13 +441,42 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
           </div>
         )}
 
-        {/* Step 1: Choose Package */}
+        {/* Step 1: Select Hall (if branch has multiple halls) */}
+        {activeHalls.length > 0 && (
+          <div>
+            <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
+              1. Select Celebration Hall
+            </label>
+            <div className="flex flex-wrap gap-3">
+              {activeHalls.map((h) => {
+                const isSelected = selectedHallId === h.id;
+                return (
+                  <button
+                    key={h.id || h.name}
+                    type="button"
+                    onClick={() => setSelectedHallId(h.id)}
+                    className={`px-5 py-2.5 rounded-2xl border text-xs font-bold transition-all flex items-center gap-2 ${
+                      isSelected
+                        ? "border-rose-600 bg-rose-600 text-white shadow-md shadow-rose-500/20 scale-105"
+                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-gray-300"
+                    }`}
+                  >
+                    <span>🏛️ {h.name}</span>
+                    <span className="opacity-80">({h.capacity || 15} guests)</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Choose Package */}
         <div>
           <label className="block text-sm font-bold text-gray-900 dark:text-white mb-3">
-            1. Select Celebration Package (1 Hour)
+            2. Select Celebration Package (1 Hour)
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {celebrationPackages.map((pkg) => {
+            {activePackages.map((pkg) => {
               const isSelected = selectedPackageId === pkg.id;
               return (
                 <button
@@ -431,7 +489,7 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
                       : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300"
                   }`}
                 >
-                  <div className="text-xs font-bold text-gray-500">{pkg.badge}</div>
+                  <div className="text-xs font-bold text-gray-500">{pkg.badge || "Standard"}</div>
                   <div className="font-black text-sm text-gray-900 dark:text-white mt-0.5">{pkg.name}</div>
                   <div className="mt-2 flex items-baseline gap-1.5">
                     <span className="text-xl font-black text-rose-600">₹{pkg.offerPrice}</span>
@@ -443,12 +501,12 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
           </div>
         </div>
 
-        {/* Step 2: Select Date & Date-Wise Available Time Slots */}
+        {/* Step 3: Select Date & Date-Wise Available Time Slots */}
         <div className="space-y-4 pt-2">
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-bold text-gray-900 dark:text-white">
-                2. Select Celebration Date
+                3. Select Celebration Date
               </label>
               <input
                 type="date"
@@ -483,13 +541,18 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
-              3. Select Available Time Slot for {bookingDate}
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-bold text-gray-900 dark:text-white">
+                4. Select Time Slot ({selectedHall ? selectedHall.name : "Hall 1"})
+              </label>
+              <span className="text-xs text-rose-600 font-bold bg-rose-50 dark:bg-rose-950 px-2.5 py-0.5 rounded-md">
+                {selectedHall ? selectedHall.name : "Hall 1"}
+              </span>
+            </div>
 
             {loadingSlots ? (
               <div className="p-4 text-center text-xs text-gray-400 animate-pulse font-semibold">
-                Checking slot availability...
+                Checking slot availability for {selectedHall?.name || "Hall"}...
               </div>
             ) : slotStatuses.length === 0 ? (
               <div className="p-4 rounded-xl bg-gray-100 text-gray-500 text-xs text-center">
@@ -549,13 +612,13 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
           </div>
         </div>
 
-        {/* Step 3: Optional Add-Ons */}
+        {/* Step 4: Optional Add-Ons */}
         <div>
           <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
-            4. Optional Celebration Add-Ons
+            5. Optional Celebration Add-Ons
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {packageAddOns.map((addon) => {
+            {activeAddOns.map((addon) => {
               const isChecked = selectedAddOns.includes(addon.id);
               return (
                 <button
@@ -576,10 +639,10 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
           </div>
         </div>
 
-        {/* Step 4: Contact & Personal Details */}
+        {/* Step 5: Contact & Personal Details */}
         <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
           <label className="block text-sm font-bold text-gray-900 dark:text-white">
-            5. Contact & Personal Details
+            6. Contact & Personal Details
           </label>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -650,7 +713,9 @@ export default function BookingFormClient({ branch, initialSlotId, initialDate }
           <div>
             <span className="text-xs text-gray-500 block">Total Package Amount</span>
             <span className="text-3xl font-black text-rose-600">₹{totalPrice}</span>
-            <span className="text-xs text-gray-400 block font-medium">Includes Special Offer Price</span>
+            <span className="text-xs text-gray-400 block font-medium">
+              {selectedHall ? `${selectedHall.name} • Special Offer` : "Includes Special Offer Price"}
+            </span>
           </div>
 
           <button

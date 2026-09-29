@@ -89,6 +89,12 @@ export default async function ManagerDashboardPage() {
             >
               ⏰ Manage Slots
             </Link>
+            <Link
+              href="/manager/settings"
+              className="px-6 py-3 rounded-full bg-purple-700/80 hover:bg-purple-800 text-white font-bold text-sm backdrop-blur-md border border-white/20 transition-all"
+            >
+              ⚙️ Halls & Packages
+            </Link>
           </div>
         </div>
 

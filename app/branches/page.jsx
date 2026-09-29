@@ -1,4 +1,5 @@
 import { db } from "@/lib/prisma";
+import { getGlobalPackages } from "@/lib/actions";
 import BranchesSearchClient from "@/components/BranchComponents/BranchesSearchClient";
 
 export const metadata = {
@@ -9,12 +10,45 @@ export const metadata = {
 export default async function BranchesPage({ searchParams }) {
   const query = (await searchParams)?.q || "";
 
-  const branches = await db.branch.findMany({
+  const { packages: globalPackages } = await getGlobalPackages();
+
+  const rawBranches = await db.branch.findMany({
     where: { isActive: true },
     include: {
+      packages: { where: { isActive: true }, orderBy: { createdAt: "asc" } },
       slots: { where: { isActive: true } }
     },
     orderBy: { createdAt: "desc" }
+  });
+
+  // Merge each branch's custom package overrides with default global packages
+  const branches = rawBranches.map((branch) => {
+    const branchPackages = branch.packages || [];
+    const usedBranchIds = new Set();
+    const mergedPackages = (globalPackages || []).map((gPkg) => {
+      const match = branchPackages.find(
+        (bPkg) =>
+          !usedBranchIds.has(bPkg.id) &&
+          (bPkg.name.toLowerCase() === gPkg.name.toLowerCase() ||
+           (bPkg.badge && gPkg.badge && bPkg.badge.toLowerCase() === gPkg.badge.toLowerCase()))
+      );
+      if (match) {
+        usedBranchIds.add(match.id);
+        return match;
+      }
+      return gPkg;
+    });
+
+    branchPackages.forEach((bPkg) => {
+      if (!usedBranchIds.has(bPkg.id)) {
+        mergedPackages.push(bPkg);
+      }
+    });
+
+    return {
+      ...branch,
+      packages: mergedPackages,
+    };
   });
 
   return (

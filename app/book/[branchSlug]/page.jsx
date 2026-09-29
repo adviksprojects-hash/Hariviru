@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/prisma";
+import { getBranchHalls, getBranchPackages, getBranchAddOns } from "@/lib/actions";
 import BookingFormClient from "./BookingFormClient";
 
 export async function generateMetadata({ params }) {
@@ -16,6 +17,7 @@ export default async function BookingPage({ params, searchParams }) {
   const sp = await searchParams;
   const initialSlotId = sp?.slotId || null;
   const initialDate = sp?.date || null;
+  const initialHallId = sp?.hallId || null;
 
   const branch = await db.branch.findUnique({
     where: { slug: branchSlug },
@@ -30,6 +32,10 @@ export default async function BookingPage({ params, searchParams }) {
   if (!branch || !branch.isActive) {
     notFound();
   }
+
+  const { halls } = await getBranchHalls(branch.id);
+  const { packages } = await getBranchPackages(branch.id);
+  const { addOns } = await getBranchAddOns(branch.id);
 
   return (
     <main className="flex-1 bg-gradient-to-b from-amber-50/40 via-white to-rose-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen pt-4 pb-12 px-4 relative overflow-hidden">
@@ -54,7 +60,15 @@ export default async function BookingPage({ params, searchParams }) {
           </div>
 
           {/* Client Booking Form */}
-          <BookingFormClient branch={branch} initialSlotId={initialSlotId} initialDate={initialDate} />
+          <BookingFormClient
+            branch={branch}
+            halls={halls || []}
+            packages={packages || []}
+            addOns={addOns || []}
+            initialSlotId={initialSlotId}
+            initialDate={initialDate}
+            initialHallId={initialHallId}
+          />
         </div>
 
       </div>

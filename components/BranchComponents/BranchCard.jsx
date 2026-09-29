@@ -82,25 +82,31 @@ export default function BranchCard({ branch }) {
           </p>
 
           {/* Quick Package Price Pills */}
-          <div className="mt-4 p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/50">
-            <div className="text-[11px] font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider mb-1.5">
-              1hr Celebration Package Offers:
-            </div>
-            <div className="grid grid-cols-3 gap-1.5 text-center text-xs">
-              <div className="p-1.5 rounded-xl bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-800">
-                <span className="block text-[10px] text-gray-400 font-semibold">1st Pkg</span>
-                <span className="font-black text-rose-600">₹1,499</span>
+          {(() => {
+            const displayPkgs = branch.packages && branch.packages.length > 0
+              ? branch.packages.slice(0, 3)
+              : [
+                  { badge: "1st Pkg", offerPrice: 1499 },
+                  { badge: "2nd Pkg", offerPrice: 2499 },
+                  { badge: "3rd Pkg", offerPrice: 3999 },
+                ];
+
+            return (
+              <div className="mt-4 p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-900/50">
+                <div className="text-[11px] font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider mb-1.5">
+                  1hr Celebration Package Offers:
+                </div>
+                <div className={`grid ${displayPkgs.length === 1 ? "grid-cols-1" : displayPkgs.length === 2 ? "grid-cols-2" : "grid-cols-3"} gap-1.5 text-center text-xs`}>
+                  {displayPkgs.map((pkg, idx) => (
+                    <div key={pkg.id || idx} className="p-1.5 rounded-xl bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-800">
+                      <span className="block text-[10px] text-gray-400 font-semibold truncate">{pkg.badge || `Pkg ${idx + 1}`}</span>
+                      <span className="font-black text-rose-600">₹{pkg.offerPrice}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="p-1.5 rounded-xl bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-800">
-                <span className="block text-[10px] text-gray-400 font-semibold">2nd Pkg</span>
-                <span className="font-black text-rose-600">₹2,499</span>
-              </div>
-              <div className="p-1.5 rounded-xl bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-800">
-                <span className="block text-[10px] text-gray-400 font-semibold">3rd Pkg</span>
-                <span className="font-black text-rose-600">₹3,999</span>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Amenities Pills */}
           <div className="mt-4 flex flex-wrap gap-1.5">

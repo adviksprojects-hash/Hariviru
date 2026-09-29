@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/prisma";
+import { getBranchPackages, getBranchAddOns } from "@/lib/actions";
 import PackageShowcase from "@/components/PackageComponents/PackageShowcase";
 import BranchImageSlider from "@/components/BranchComponents/BranchImageSlider";
 import BranchAvailableSlotsClient from "@/components/BranchComponents/BranchAvailableSlotsClient";
@@ -33,6 +34,9 @@ export default async function BranchDetailPage({ params }) {
   if (!branch || !branch.isActive) {
     notFound();
   }
+
+  const { packages } = await getBranchPackages(branch.id);
+  const { addOns } = await getBranchAddOns(branch.id);
 
   const mapUrl = branch.mapUrl || `https://maps.google.com/?q=${encodeURIComponent(branch.address + " " + branch.city)}`;
   const instagram = branch.instagramHandle || "celebration_house_23";
@@ -198,7 +202,7 @@ export default async function BranchDetailPage({ params }) {
         </div>
 
         {/* 1hr Celebration Packages for this Franchise */}
-        <PackageShowcase selectedBranchSlug={branch.slug} />
+        <PackageShowcase selectedBranchSlug={branch.slug} packages={packages} addOns={addOns} />
 
         {/* Embedded Google Map Section Below About & Packages */}
         <section className="mt-16 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">

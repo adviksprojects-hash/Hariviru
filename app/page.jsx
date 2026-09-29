@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/prisma";
+import { getGlobalPackages, getGlobalAddOns } from "@/lib/actions";
 import InteractiveHeroConfetti from "@/components/HomeComponents/InteractiveHeroConfetti";
 import WhatWeOffer from "@/components/HomeComponents/WhatWeOffer";
 import PackageShowcase from "@/components/PackageComponents/PackageShowcase";
@@ -22,6 +23,9 @@ export default async function Home() {
     where: { isActive: true },
     take: 6,
   });
+
+  const { packages: globalPackages } = await getGlobalPackages();
+  const { addOns: globalAddOns } = await getGlobalAddOns();
 
   return (
     <main className="flex-1 bg-gradient-to-b from-amber-50/40 via-white to-rose-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
@@ -92,7 +96,7 @@ export default async function Home() {
       <WhatWeOffer />
 
       {/* 2. Celebration Packages Showcase Section */}
-      <PackageShowcase />
+      <PackageShowcase packages={globalPackages} addOns={globalAddOns} />
 
       {/* 3. Why Choose Us Section */}
       <WhyChooseUs />

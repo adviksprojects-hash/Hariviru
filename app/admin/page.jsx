@@ -127,6 +127,12 @@ export default async function AdminDashboardPage() {
               👥 Manage Managers
             </Link>
             <Link
+              href="/admin/settings"
+              className="px-5 py-2.5 rounded-full bg-purple-600 text-white font-bold text-xs shadow-md"
+            >
+              ⚙️ Package Settings
+            </Link>
+            <Link
               href="/admin/franchise-inquiries"
               className="px-5 py-2.5 rounded-full bg-amber-600 text-white font-bold text-xs shadow-md"
             >
