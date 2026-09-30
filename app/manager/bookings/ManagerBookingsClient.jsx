@@ -1,27 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { createOfflineBooking, updateBookingStatus } from "@/lib/actions";
+import Link from "next/link";
+import { updateBookingStatus } from "@/lib/actions";
 import { buildWhatsAppConfirmationText } from "@/lib/whatsapp";
+import ManagerOfflineBookingModal from "./ManagerOfflineBookingModal";
 
-export default function ManagerBookingsClient({ branch, initialBookings }) {
+export default function ManagerBookingsClient({
+  branch,
+  initialBookings,
+  halls = [],
+  packages = [],
+  addOns = [],
+}) {
   const [bookings, setBookings] = useState(initialBookings);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("ALL"); // ALL, PENDING, ONLINE, OFFLINE
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const [showOfflineModal, setShowOfflineModal] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Form states for offline booking creation
-  const [offlineDate, setOfflineDate] = useState(new Date().toISOString().split("T")[0]);
-  const [offlineSlotId, setOfflineSlotId] = useState(branch.slots[0]?.id || "");
-  const [offlineCustomerName, setOfflineCustomerName] = useState("");
-  const [offlineCustomerPhone, setOfflineCustomerPhone] = useState("");
-  const [offlineCustomerEmail, setOfflineCustomerEmail] = useState("");
-  const [offlineAmount, setOfflineAmount] = useState("");
-  const [offlineNotes, setOfflineNotes] = useState("");
-  const [offlinePaymentStatus, setOfflinePaymentStatus] = useState("PAID");
 
   const getWaLink = (booking) => {
     const { waLink } = buildWhatsAppConfirmationText(booking, branch);
@@ -33,14 +31,12 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
       const res = await updateBookingStatus(booking.id, "CONFIRMED", "PAID");
       if (res.success) {
         setBookings(bookings.map((b) => (b.id === booking.id ? res.booking : b)));
-        
+
         if (res.waResult?.success) {
           alert("🎉 Booking APPROVED & Automated WhatsApp Confirmation Message Sent Successfully!");
         } else {
-          // If automated API message had an error or token issue, use wa.me direct web link fallback
           if (res.waResult?.data?.error) {
-            const metaErr = res.waResult.data.error;
-            console.warn("Meta API Error:", metaErr);
+            console.warn("Meta API Error:", res.waResult.data.error);
           }
           const waLink = getWaLink(booking);
           window.open(waLink, "_blank");
@@ -77,39 +73,23 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
     return true;
   });
 
-  const handleCreateOffline = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  const totalPages = Math.max(1, Math.ceil(filteredBookings.length / pageSize));
+  const activePage = Math.min(currentPage, totalPages);
+  const paginatedBookings = filteredBookings.slice((activePage - 1) * pageSize, activePage * pageSize);
 
-    const selectedSlotObj = branch.slots.find((s) => s.id === offlineSlotId);
+  const handleSearchChange = (val) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+  };
 
-    try {
-      const res = await createOfflineBooking({
-        branchId: branch.id,
-        slotId: offlineSlotId || null,
-        slotTitle: selectedSlotObj ? selectedSlotObj.title : "Walk-in Slot",
-        bookingDate: offlineDate,
-        customerName: offlineCustomerName,
-        customerPhone: offlineCustomerPhone,
-        customerEmail: offlineCustomerEmail,
-        totalAmount: offlineAmount,
-        notes: offlineNotes,
-        paymentStatus: offlinePaymentStatus,
-      });
+  const handleFilterChange = (type) => {
+    setFilterType(type);
+    setCurrentPage(1);
+  };
 
-      if (res.success) {
-        setBookings([res.booking, ...bookings]);
-        setShowOfflineModal(false);
-        setOfflineCustomerName("");
-        setOfflineCustomerPhone("");
-        setOfflineNotes("");
-      }
-    } catch (err) {
-      setError(err.message || "Failed to create offline booking.");
-    } finally {
-      setLoading(false);
-    }
+  const handleOfflineBookingCreated = (newBooking) => {
+    setBookings([newBooking, ...bookings]);
+    setShowOfflineModal(false);
   };
 
   const pendingCount = bookings.filter((b) => b.bookingStatus === "PENDING").length;
@@ -118,46 +98,68 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
     <div>
       {/* Top Action & Search Bar */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        
         {/* Search Input */}
         <div className="flex-1 max-w-md">
           <input
             type="text"
             placeholder="Search customer, phone, HV-2026 #, or UTR/Txn ID..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
           />
         </div>
 
-        {/* Filter Pills & Add Offline Button */}
+        {/* Filter Pills & Calendar / Add Offline Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex items-center gap-1 text-xs font-semibold">
             <button
-              onClick={() => setFilterType("ALL")}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${filterType === "ALL" ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-xs" : "text-gray-500"}`}
+              onClick={() => handleFilterChange("ALL")}
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                filterType === "ALL"
+                  ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-xs"
+                  : "text-gray-500"
+              }`}
             >
               All ({bookings.length})
             </button>
             <button
-              onClick={() => setFilterType("PENDING")}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${filterType === "PENDING" ? "bg-amber-500 text-white font-bold shadow-xs" : "text-amber-600 font-bold"}`}
+              onClick={() => handleFilterChange("PENDING")}
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                filterType === "PENDING"
+                  ? "bg-amber-500 text-white font-bold shadow-xs"
+                  : "text-amber-600 font-bold"
+              }`}
             >
               Pending ({pendingCount})
             </button>
             <button
-              onClick={() => setFilterType("ONLINE")}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${filterType === "ONLINE" ? "bg-white dark:bg-gray-900 text-rose-600 font-bold shadow-xs" : "text-gray-500"}`}
+              onClick={() => handleFilterChange("ONLINE")}
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                filterType === "ONLINE"
+                  ? "bg-white dark:bg-gray-900 text-rose-600 font-bold shadow-xs"
+                  : "text-gray-500"
+              }`}
             >
               Online
             </button>
             <button
-              onClick={() => setFilterType("OFFLINE")}
-              className={`px-3 py-1.5 rounded-lg transition-colors ${filterType === "OFFLINE" ? "bg-white dark:bg-gray-900 text-amber-600 font-bold shadow-xs" : "text-gray-500"}`}
+              onClick={() => handleFilterChange("OFFLINE")}
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                filterType === "OFFLINE"
+                  ? "bg-white dark:bg-gray-900 text-amber-600 font-bold shadow-xs"
+                  : "text-gray-500"
+              }`}
             >
               Offline
             </button>
           </div>
+
+          <Link
+            href="/manager/calendar"
+            className="px-4 py-2.5 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-900 dark:text-purple-300 font-bold text-xs border border-purple-200 dark:border-purple-800 hover:bg-purple-200 transition-colors flex items-center gap-1"
+          >
+            <span>📅 Availability Calendar</span>
+          </Link>
 
           <button
             onClick={() => setShowOfflineModal(true)}
@@ -166,284 +168,278 @@ export default function ManagerBookingsClient({ branch, initialBookings }) {
             + Log Offline Walk-in Booking
           </button>
         </div>
-
       </div>
 
-      {/* Offline Booking Form Modal */}
+      {/* Shared Offline Booking Form Modal */}
       {showOfflineModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-gray-200 dark:border-gray-800 relative">
-            <button
-              onClick={() => setShowOfflineModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold"
-            >
-              ✕
-            </button>
-
-            <h2 className="text-xl font-black text-gray-900 dark:text-white mb-1">
-              Log Offline Walk-in Booking
-            </h2>
-            <p className="text-xs text-gray-500 mb-6">Record a direct phone or walk-in reservation for {branch.name}.</p>
-
-            {error && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold mb-4">
-                ⚠️ {error}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateOffline} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Celebration Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={offlineDate}
-                  onChange={(e) => setOfflineDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Select Time Slot *</label>
-                <select
-                  value={offlineSlotId}
-                  onChange={(e) => setOfflineSlotId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-sm"
-                >
-                  {branch.slots.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.title} ({s.startTime} - {s.endTime})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Customer Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Rahul"
-                    value={offlineCustomerName}
-                    onChange={(e) => setOfflineCustomerName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Phone Number *</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="+91 98765 43210"
-                    value={offlineCustomerPhone}
-                    onChange={(e) => setOfflineCustomerPhone(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Total Amount (₹) *</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="Enter amount (e.g. 1499)"
-                    value={offlineAmount}
-                    onChange={(e) => setOfflineAmount(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Payment Status</label>
-                  <select
-                    value={offlinePaymentStatus}
-                    onChange={(e) => setOfflinePaymentStatus(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
-                  >
-                    <option value="PAID">PAID (Cash/UPI)</option>
-                    <option value="PENDING">PENDING</option>
-                    <option value="PARTIAL">PARTIAL ADVANCE</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Notes / Custom Setup</label>
-                <textarea
-                  rows={2}
-                  value={offlineNotes}
-                  onChange={(e) => setOfflineNotes(e.target.value)}
-                  placeholder="Walk-in cash payment. Wants Happy Birthday banner."
-                  className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowOfflineModal(false)}
-                  className="px-4 py-2 rounded-xl border border-gray-300 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-6 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs"
-                >
-                  {loading ? "Saving..." : "Save Offline Booking"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ManagerOfflineBookingModal
+          branch={branch}
+          halls={halls}
+          packages={packages}
+          addOns={addOns}
+          onClose={() => setShowOfflineModal(false)}
+          onSuccess={handleOfflineBookingCreated}
+        />
       )}
 
       {/* Bookings List Table */}
       <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-200 dark:border-gray-800 shadow-xs">
         {filteredBookings.length === 0 ? (
-          <p className="text-center text-sm text-gray-500 py-12">No bookings matching filter.</p>
+          <p className="text-center text-sm text-gray-500 py-12">
+            No bookings matching filter.
+          </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-500 uppercase">
-                  <th className="py-3 px-3">Booking Ref</th>
-                  <th className="py-3 px-3">Customer Info</th>
-                  <th className="py-3 px-3">Date & Slot</th>
-                  <th className="py-3 px-3">Amount & Payment Info</th>
-                  <th className="py-3 px-3">Status</th>
-                  <th className="py-3 px-3 text-right">Manager Verification Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filteredBookings.map((b) => (
-                  <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                    <td className="py-4 px-3 font-mono text-xs font-bold text-gray-900 dark:text-white">
-                      {b.bookingNumber}
-                      <div className="mt-1">
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                          b.bookingType === "ONLINE" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"
-                        }`}>
-                          {b.bookingType}
-                        </span>
-                      </div>
-                      {b.notes && (
-                        <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-1 line-clamp-1 max-w-xs font-sans">
-                          📝 {b.notes}
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-500 uppercase">
+                    <th className="py-3 px-3">Booking Ref</th>
+                    <th className="py-3 px-3">Customer Info</th>
+                    <th className="py-3 px-3">Date & Slot</th>
+                    <th className="py-3 px-3">Amount & Payment Info</th>
+                    <th className="py-3 px-3">Status</th>
+                    <th className="py-3 px-3 text-right">
+                      Manager Verification Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {paginatedBookings.map((b) => (
+                    <tr
+                      key={b.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                    >
+                      <td className="py-4 px-3 font-mono text-xs font-bold text-gray-900 dark:text-white">
+                        {b.bookingNumber}
+                        <div className="mt-1 flex items-center gap-1">
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                              b.bookingType === "ONLINE"
+                                ? "bg-rose-100 text-rose-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {b.bookingType}
+                          </span>
+                          {b.hallName && (
+                            <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 text-[10px] font-bold">
+                              🏛️ {b.hallName}
+                            </span>
+                          )}
                         </div>
-                      )}
-                    </td>
-
-                    <td className="py-4 px-3">
-                      <div className="font-bold text-gray-900 dark:text-white">{b.customerName}</div>
-                      <div className="text-xs text-gray-500">📞 {b.customerPhone}</div>
-                      {b.customerEmail && <div className="text-[11px] text-gray-400">{b.customerEmail}</div>}
-                    </td>
-
-                    <td className="py-4 px-3">
-                      <div className="font-semibold text-gray-800 dark:text-gray-200 text-xs">
-                        📅 {new Date(b.bookingDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-0.5">🕒 {b.slotTitle || "Custom Slot"}</div>
-                    </td>
-
-                    <td className="py-4 px-3">
-                      <div className="font-black text-rose-600 text-base">₹{b.totalAmount}</div>
-                      
-                      {/* Transaction / UTR ID display */}
-                      {(() => {
-                        const utr = b.transactionId || b.notes?.match(/\[UPI UTR:\s*([^\]]+)\]/)?.[1];
-                        return utr ? (
-                          <div className="mt-1 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-[11px] font-mono text-emerald-800 dark:text-emerald-300 font-bold inline-block">
-                            💳 UTR: {utr}
+                        {b.notes && (
+                          <div className="text-[11px] text-amber-700 dark:text-amber-400 mt-1 line-clamp-1 max-w-xs font-sans">
+                            📝 {b.notes}
                           </div>
-                        ) : (
-                          <div className="text-[10px] text-gray-400 mt-0.5">No UTR logged</div>
-                        );
-                      })()}
+                        )}
+                      </td>
 
-                      <div className="mt-1">
-                        <select
-                          value={b.paymentStatus}
-                          onChange={(e) => handleStatusChange(b.id, b.bookingStatus, e.target.value)}
-                          className="text-xs font-bold px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-                        >
-                          <option value="PAID">PAID</option>
-                          <option value="PENDING">PENDING</option>
-                          <option value="PARTIAL">PARTIAL</option>
-                          <option value="REFUNDED">REFUNDED</option>
-                        </select>
-                      </div>
-                    </td>
-
-                    <td className="py-4 px-3">
-                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                        b.bookingStatus === "CONFIRMED"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : b.bookingStatus === "PENDING"
-                          ? "bg-amber-100 text-amber-800 animate-pulse"
-                          : b.bookingStatus === "COMPLETED"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-rose-100 text-rose-800"
-                      }`}>
-                        {b.bookingStatus}
-                      </span>
-                    </td>
-
-                    {/* Quick Approve & Send WhatsApp / Reject Actions */}
-                    <td className="py-4 px-3 text-right">
-                      {b.bookingStatus === "PENDING" ? (
-                        <div className="flex items-center justify-end gap-2 flex-wrap sm:flex-nowrap">
-                          <button
-                            onClick={() => handleApproveAndSendWhatsApp(b)}
-                            title="Approve booking and open pre-filled WhatsApp confirmation message to send to customer"
-                            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 shrink-0"
-                          >
-                            <span>Approve & WhatsApp 💬</span>
-                          </button>
-                          <button
-                            onClick={() => handleStatusChange(b.id, "CANCELLED", "REFUNDED")}
-                            className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs"
-                          >
-                            Reject ✕
-                          </button>
+                      <td className="py-4 px-3">
+                        <div className="font-bold text-gray-900 dark:text-white">
+                          {b.customerName}
                         </div>
-                      ) : (
-                        <div className="flex items-center justify-end gap-2">
-                          <a
-                            href={getWaLink(b)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold text-xs hover:bg-emerald-200 transition-colors inline-flex items-center gap-1"
-                          >
-                            <span>💬 Send WhatsApp</span>
-                          </a>
+                        <div className="text-xs text-gray-500">
+                          📞 {b.customerPhone}
+                        </div>
+                        {b.customerEmail && (
+                          <div className="text-[11px] text-gray-400">
+                            {b.customerEmail}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="py-4 px-3">
+                        <div className="font-semibold text-gray-800 dark:text-gray-200 text-xs">
+                          📅{" "}
+                          {new Date(b.bookingDate).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          🕒 {b.slotTitle || "Custom Slot"}
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-3">
+                        <div className="font-black text-rose-600 text-base">
+                          ₹{b.totalAmount}
+                        </div>
+
+                        {/* Transaction / UTR ID display */}
+                        {(() => {
+                          const utr =
+                            b.transactionId ||
+                            b.notes?.match(/\[UPI UTR:\s*([^\]]+)\]/)?.[1];
+                          return utr ? (
+                            <div className="mt-1 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-[11px] font-mono text-emerald-800 dark:text-emerald-300 font-bold inline-block">
+                              💳 UTR: {utr}
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-gray-400 mt-0.5">
+                              No UTR logged
+                            </div>
+                          );
+                        })()}
+
+                        <div className="mt-1">
                           <select
-                            value={b.bookingStatus}
-                            onChange={(e) => handleStatusChange(b.id, e.target.value, b.paymentStatus)}
-                            className="text-xs font-bold px-2.5 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                            value={b.paymentStatus}
+                            onChange={(e) =>
+                              handleStatusChange(
+                                b.id,
+                                b.bookingStatus,
+                                e.target.value
+                              )
+                            }
+                            className="text-xs font-bold px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
                           >
-                            <option value="CONFIRMED">CONFIRMED</option>
-                            <option value="COMPLETED">COMPLETED</option>
-                            <option value="CANCELLED">CANCELLED (Release Slot)</option>
+                            <option value="PAID">PAID</option>
                             <option value="PENDING">PENDING</option>
+                            <option value="PARTIAL">PARTIAL</option>
+                            <option value="REFUNDED">REFUNDED</option>
                           </select>
                         </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </td>
+
+                      <td className="py-4 px-3">
+                        <span
+                          className={`text-xs font-bold px-3 py-1 rounded-full ${
+                            b.bookingStatus === "CONFIRMED"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : b.bookingStatus === "PENDING"
+                              ? "bg-amber-100 text-amber-800 animate-pulse"
+                              : b.bookingStatus === "COMPLETED"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-rose-100 text-rose-800"
+                          }`}
+                        >
+                          {b.bookingStatus}
+                        </span>
+                      </td>
+
+                      {/* Quick Approve & Send WhatsApp / Reject Actions */}
+                      <td className="py-4 px-3 text-right">
+                        {b.bookingStatus === "PENDING" ? (
+                          <div className="flex items-center justify-end gap-2 flex-wrap sm:flex-nowrap">
+                            <button
+                              onClick={() => handleApproveAndSendWhatsApp(b)}
+                              title="Approve booking and open pre-filled WhatsApp confirmation message to send to customer"
+                              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 shrink-0"
+                            >
+                              <span>Approve & WhatsApp 💬</span>
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleStatusChange(
+                                  b.id,
+                                  "CANCELLED",
+                                  "REFUNDED"
+                                )
+                              }
+                              className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs"
+                            >
+                              Reject ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            <a
+                              href={getWaLink(b)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold text-xs hover:bg-emerald-200 transition-colors inline-flex items-center gap-1"
+                            >
+                              <span>💬 Send WhatsApp</span>
+                            </a>
+                            <select
+                              value={b.bookingStatus}
+                              onChange={(e) =>
+                                handleStatusChange(
+                                  b.id,
+                                  e.target.value,
+                                  b.paymentStatus
+                                )
+                              }
+                              className="text-xs font-bold px-2.5 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                            >
+                              <option value="CONFIRMED">CONFIRMED</option>
+                              <option value="COMPLETED">COMPLETED</option>
+                              <option value="CANCELLED">
+                                CANCELLED (Release Slot)
+                              </option>
+                              <option value="PENDING">PENDING</option>
+                            </select>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-gray-500 font-medium">
+                  Showing{" "}
+                  <span className="font-bold text-gray-900 dark:text-white">
+                    {(activePage - 1) * pageSize + 1}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-bold text-gray-900 dark:text-white">
+                    {Math.min(activePage * pageSize, filteredBookings.length)}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-bold text-gray-900 dark:text-white">
+                    {filteredBookings.length}
+                  </span>{" "}
+                  bookings
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={activePage === 1}
+                    className="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    ← Previous
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (pageNum) => (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${
+                          pageNum === activePage
+                            ? "bg-rose-600 text-white shadow-xs"
+                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  )}
+
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={activePage === totalPages}
+                    className="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
-
     </div>
   );
 }

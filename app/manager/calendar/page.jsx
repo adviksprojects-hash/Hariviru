@@ -2,13 +2,13 @@ import Link from "next/link";
 import { requireRole } from "@/lib/rbac";
 import { db } from "@/lib/prisma";
 import { getBranchPackages, getBranchAddOns } from "@/lib/actions";
-import ManagerBookingsClient from "./ManagerBookingsClient";
+import ManagerCalendarClient from "./ManagerCalendarClient";
 
 export const metadata = {
-  title: "Branch Bookings | Manager Portal",
+  title: "Branch Availability Calendar | Manager Portal",
 };
 
-export default async function ManagerBookingsPage() {
+export default async function ManagerCalendarPage() {
   const user = await requireRole(["MANAGER", "ADMIN"]);
 
   let branchId = user.managedBranchId;
@@ -22,13 +22,8 @@ export default async function ManagerBookingsPage() {
   const branch = await db.branch.findUnique({
     where: { id: branchId },
     include: {
-      slots: { where: { isActive: true } },
+      slots: { where: { isActive: true }, orderBy: { startTime: "asc" } },
     },
-  });
-
-  const bookings = await db.booking.findMany({
-    where: { branchId },
-    orderBy: { bookingDate: "desc" },
   });
 
   let halls = [];
@@ -45,28 +40,41 @@ export default async function ManagerBookingsPage() {
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10 px-4">
       <div className="container mx-auto max-w-6xl">
-        
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <Link href="/manager" className="text-xs font-semibold text-rose-600 hover:underline">
               ← Back to Manager Overview
             </Link>
             <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight mt-1">
-              {branch.name} — Booking Manager
+              📅 {branch.name} — Availability Calendar
             </h1>
-            <p className="text-sm text-gray-500">Manage online reservations & record new offline walk-in bookings.</p>
+            <p className="text-sm text-gray-500">
+              Inspect date-wise booked and available celebration slots for each hall.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href="/manager/bookings"
+              className="px-4 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200 shadow-xs hover:border-rose-500"
+            >
+              📋 All Bookings
+            </Link>
+            <Link
+              href="/manager/slots"
+              className="px-4 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-xs font-bold text-gray-800 dark:text-gray-200 shadow-xs hover:border-rose-500"
+            >
+              ⏰ Slots Setup
+            </Link>
           </div>
         </div>
 
-        {/* Client Component handling list, filtering, offline creation modal, status updates & pagination */}
-        <ManagerBookingsClient
+        <ManagerCalendarClient
           branch={branch}
-          initialBookings={bookings}
           halls={halls}
           packages={packages}
           addOns={addOns}
         />
-
       </div>
     </main>
   );

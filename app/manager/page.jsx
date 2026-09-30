@@ -50,6 +50,7 @@ export default async function ManagerDashboardPage() {
 
   // Calculate branch stats
   const totalBookings = await db.booking.count({ where: { branchId: branch.id } });
+  const pendingBookingsCount = await db.booking.count({ where: { branchId: branch.id, bookingStatus: "PENDING" } });
   const onlineBookingsCount = await db.booking.count({ where: { branchId: branch.id, bookingType: "ONLINE" } });
   const offlineBookingsCount = await db.booking.count({ where: { branchId: branch.id, bookingType: "OFFLINE" } });
 
@@ -65,7 +66,7 @@ export default async function ManagerDashboardPage() {
       <div className="container mx-auto max-w-6xl">
         
         {/* Header Banner */}
-        <div className="bg-linear-to-r from-rose-600 to-amber-600 rounded-3xl p-8 text-white shadow-xl mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="bg-linear-to-r from-rose-600 to-amber-600 rounded-3xl p-8 text-white shadow-xl mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold uppercase tracking-wider">
               Franchise Manager Dashboard
@@ -79,9 +80,20 @@ export default async function ManagerDashboardPage() {
           <div className="flex flex-wrap gap-3">
             <Link
               href="/manager/bookings"
-              className="px-6 py-3 rounded-full bg-white text-rose-600 hover:bg-rose-50 font-bold text-sm shadow-md transition-all"
+              className="relative px-6 py-3 rounded-full bg-white text-rose-600 hover:bg-rose-50 font-bold text-sm shadow-md transition-all flex items-center gap-2"
             >
-              📋 Manage Bookings & Offline Walk-ins
+              <span>📋 Manage Bookings & Walk-ins</span>
+              {pendingBookingsCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white font-extrabold text-xs animate-pulse">
+                  {pendingBookingsCount} NEW
+                </span>
+              )}
+            </Link>
+            <Link
+              href="/manager/calendar"
+              className="px-6 py-3 rounded-full bg-amber-500/90 hover:bg-amber-600 text-white font-bold text-sm backdrop-blur-md border border-white/20 transition-all"
+            >
+              📅 Availability Calendar
             </Link>
             <Link
               href="/manager/slots"
@@ -97,6 +109,27 @@ export default async function ManagerDashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* Real-time Notification Banner for Manager */}
+        {pendingBookingsCount > 0 && (
+          <div className="mb-8 p-5 rounded-3xl bg-linear-to-r from-amber-500 to-orange-600 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl border border-amber-400">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🔔</span>
+              <div>
+                <h3 className="font-extrabold text-base">New Pending Online Booking Alert!</h3>
+                <p className="text-xs text-amber-100 mt-0.5">
+                  You have <span className="font-bold underline">{pendingBookingsCount}</span> new customer reservation(s) awaiting verification & WhatsApp approval.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/manager/bookings"
+              className="px-5 py-2.5 rounded-xl bg-white text-amber-900 font-bold text-xs shadow-md hover:bg-amber-50 shrink-0 text-center"
+            >
+              Review & Send WhatsApp Approval →
+            </Link>
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
