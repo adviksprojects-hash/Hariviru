@@ -56,23 +56,25 @@ model User {
 }
 
 model Branch {
-  id              String    @id @default(uuid())
-  name            String
-  slug            String    @unique
-  city            String
-  state           String
-  address         String
-  phone           String
-  email           String
-  description     String?
-  images          String[]  @default([])
-  amenities       String[]  @default([])
-  pricePerSlot    Float     @default(0)
-  mapUrl          String?
-  instagramHandle String?
-  whatsapp        String?
-  upiId           String?   @default("9762486649@ybl")
-  isActive        Boolean   @default(true)
+  id                 String    @id @default(uuid())
+  name               String
+  slug               String    @unique
+  city               String
+  state              String
+  address            String
+  phone              String
+  email              String
+  description        String?
+  images             String[]  @default([])
+  amenities          String[]  @default([])
+  pricePerSlot       Float     @default(0)
+  mapUrl             String?
+  instagramHandle    String?
+  whatsapp           String?
+  upiId              String?   @default("9762486649@ybl")
+  depositModeEnabled Boolean   @default(false)
+  depositAmount      Float     @default(500)
+  isActive           Boolean   @default(true)
   
   managers        User[]    @relation("BranchManager")
   halls           Hall[]
@@ -90,7 +92,7 @@ model Hall {
   branchId  String
   branch    Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
   name      String    // e.g. "Hall 1", "Hall 2 (VIP Lounge)"
-  capacity  Int?      @default(15)
+  capacity  Int?
   isActive  Boolean   @default(true)
 
   bookings  Booking[]
@@ -115,16 +117,17 @@ model Package {
 }
 
 model AddOn {
-  id        String   @id @default(uuid())
-  branchId  String?  // null = Global Admin AddOn; set = Branch Specific AddOn
-  branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  name      String
-  price     Float
-  isGlobal  Boolean  @default(true)
-  isActive  Boolean  @default(true)
+  id              String   @id @default(uuid())
+  branchId        String?  // null = Global Admin AddOn; set = Branch Specific AddOn
+  branch          Branch?  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  name            String
+  price           Float
+  isQuantityBased Boolean  @default(false)
+  isGlobal        Boolean  @default(true)
+  isActive        Boolean  @default(true)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Slot {
@@ -154,28 +157,32 @@ model SlotDisabledDate {
 }
 
 model Booking {
-  id            String        @id @default(uuid())
-  bookingNumber String        @unique
-  userId        String?
-  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  branchId      String
-  branch        Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  hallId        String?
-  hall          Hall?         @relation(fields: [hallId], references: [id], onDelete: SetNull)
-  hallName      String?
-  slotId        String?
-  slot          Slot?         @relation(fields: [slotId], references: [id], onDelete: SetNull)
-  slotTitle     String?
-  customerName  String
-  customerEmail String
-  customerPhone String
-  bookingDate   DateTime
-  totalAmount   Float
-  paymentStatus PaymentStatus @default(PENDING)
-  bookingStatus BookingStatus @default(PENDING)
-  bookingType   BookingType   @default(ONLINE)
-  transactionId String?
-  notes         String?
+  id              String        @id @default(uuid())
+  bookingNumber   String        @unique
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  hallId          String?
+  hall            Hall?         @relation(fields: [hallId], references: [id], onDelete: SetNull)
+  hallName        String?
+  slotId          String?
+  slot            Slot?         @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  slotTitle       String?
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  eventCategory   String?
+  bookingDate     DateTime
+  totalAmount     Float
+  paidAmount      Float?        @default(0)
+  remainingAmount Float?        @default(0)
+  paymentType     String?       @default("FULL")
+  paymentStatus   PaymentStatus @default(PENDING)
+  bookingStatus   BookingStatus @default(PENDING)
+  bookingType     BookingType   @default(ONLINE)
+  transactionId   String?
+  notes           String?
   
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt

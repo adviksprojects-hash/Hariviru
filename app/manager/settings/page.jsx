@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/rbac";
 import { db } from "@/lib/prisma";
 import { getBranchHalls, getAllPackagesForManager, getAllAddOnsForManager } from "@/lib/actions";
+import { enrichBranchWithDepositSettings } from "@/lib/deposit-settings";
 import ManagerSettingsClient from "./ManagerSettingsClient";
 
 export const metadata = {
@@ -28,7 +29,8 @@ export default async function ManagerSettingsPage() {
     );
   }
 
-  const branch = await db.branch.findUnique({ where: { id: branchId } });
+  const rawBranch = await db.branch.findUnique({ where: { id: branchId } });
+  const branch = enrichBranchWithDepositSettings(rawBranch);
 
   const { halls } = await getBranchHalls(branchId);
   const { globalPackages, branchPackages } = await getAllPackagesForManager(branchId);

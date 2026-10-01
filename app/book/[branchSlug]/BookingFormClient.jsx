@@ -31,7 +31,9 @@ export default function BookingFormClient({
   const [loadingSlots, setLoadingSlots] = useState(true);
 
   const [selectedSlotId, setSelectedSlotId] = useState(initialSlotId || "");
-  const [selectedAddOns, setSelectedAddOns] = useState([]);
+  const [selectedAddOns, setSelectedAddOns] = useState({}); // { [addonId]: quantity }
+  const [eventCategory, setEventCategory] = useState("");
+  const [paymentType, setPaymentType] = useState("FULL"); // FULL or DEPOSIT
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -90,19 +92,41 @@ export default function BookingFormClient({
     activePackages.find((p) => p.id === selectedPackageId) || activePackages[0];
   const selectedSlot = slotStatuses.find((s) => s.id === selectedSlotId);
 
-  // Calculate total price: Package Offer Price + Selected Add-Ons
-  const addOnsTotal = selectedAddOns.reduce((sum, addonId) => {
+  // Calculate total price: Package Offer Price + Selected Add-Ons * Quantity
+  const addOnsTotal = Object.entries(selectedAddOns).reduce((sum, [addonId, qty]) => {
+    if (!qty || qty <= 0) return sum;
     const addon = activeAddOns.find((a) => a.id === addonId);
-    return sum + (addon ? addon.price : 0);
+    return sum + (addon ? addon.price * qty : 0);
   }, 0);
 
   const totalPrice = (selectedPackage.offerPrice || 1499) + addOnsTotal;
 
-  const toggleAddOn = (addonId) => {
-    if (selectedAddOns.includes(addonId)) {
-      setSelectedAddOns(selectedAddOns.filter((id) => id !== addonId));
+  // Deposit Payment Calculations
+  const isDepositSelected = paymentType === "DEPOSIT" && branch.depositModeEnabled && branch.depositAmount > 0;
+  const payableAmount = isDepositSelected ? Math.min(branch.depositAmount, totalPrice) : totalPrice;
+  const remainingAmount = isDepositSelected ? Math.max(0, totalPrice - payableAmount) : 0;
+
+  const toggleAddOn = (addon) => {
+    const currentQty = selectedAddOns[addon.id] || 0;
+    if (currentQty > 0) {
+      const updated = { ...selectedAddOns };
+      delete updated[addon.id];
+      setSelectedAddOns(updated);
     } else {
-      setSelectedAddOns([...selectedAddOns, addonId]);
+      setSelectedAddOns({ ...selectedAddOns, [addon.id]: 1 });
+    }
+  };
+
+  const updateAddOnQty = (addonId, delta, e) => {
+    e.stopPropagation();
+    const currentQty = selectedAddOns[addonId] || 1;
+    const newQty = currentQty + delta;
+    if (newQty <= 0) {
+      const updated = { ...selectedAddOns };
+      delete updated[addonId];
+      setSelectedAddOns(updated);
+    } else {
+      setSelectedAddOns({ ...selectedAddOns, [addonId]: newQty });
     }
   };
 
@@ -110,6 +134,10 @@ export default function BookingFormClient({
     e.preventDefault();
     if (!selectedSlotId) {
       setError("Please select an available time slot for your chosen date & hall.");
+      return;
+    }
+    if (!eventCategory || !eventCategory.trim()) {
+      setError("Event Category is required (e.g., Birthday, Anniversary).");
       return;
     }
     if (!customerName || !customerPhone) {
@@ -146,16 +174,16 @@ export default function BookingFormClient({
     setLoading(true);
     setError(null);
 
-    const addOnNames = selectedAddOns
-      .map((id) => activeAddOns.find((a) => a.id === id)?.name)
-      .filter(Boolean)
-      .join(", ");
-
-    const hallLabel = selectedHall ? selectedHall.name : "Hall 1";
-
-    const combinedNotes = `[Hall: ${hallLabel}] [Package: ${selectedPackage.badge || "Package"} (${selectedPackage.name})] ${
-      addOnNames ? `[Add-Ons: ${addOnNames}] ` : ""
-    }${notes ? `[Notes: ${notes}]` : ""}`;
+    const selectedAddOnStrings = Object.entries(selectedAddOns)
+      .filter(([_, qty]) => qty > 0)
+      .map(([addonId, qty]) => {
+        const addon = activeAddOns.find((a) => a.id === addonId);
+        if (!addon) return null;
+        return addon.isQuantityBased
+          ? `${addon.name} (Qty: ${qty}, ₹${addon.price * qty})`
+          : `${addon.name} (₹${addon.price})`;
+      })
+      .filter(Boolean);
 
     try {
       const res = await createOnlineBooking({
@@ -168,8 +196,11 @@ export default function BookingFormClient({
         customerEmail,
         customerPhone,
         transactionId,
-        notes: combinedNotes,
+        notes,
         totalAmount: totalPrice,
+        eventCategory,
+        packageName: selectedPackage?.name || null,
+        selectedAddOns: selectedAddOnStrings,
       });
 
       if (res.success) {
@@ -201,7 +232,7 @@ export default function BookingFormClient({
 
   const upiQrData = `upi://pay?pa=${encodeURIComponent(branchUpiId)}&pn=${encodeURIComponent(
     "HaruViru Celebration House"
-  )}&am=${totalPrice}&cu=INR&tn=${encodeURIComponent(`Slot Booking ${selectedSlot?.title || ""}`)}`;
+  )}&am=${payableAmount}&cu=INR&tn=${encodeURIComponent(`Slot Booking ${selectedSlot?.title || ""}`)}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiQrData)}`;
 
   if (bookingResult) {
@@ -253,9 +284,19 @@ export default function BookingFormClient({
             <span className="font-bold text-gray-900 dark:text-white">{selectedSlot?.title} ({selectedSlot?.startTime} - {selectedSlot?.endTime})</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-500 font-semibold">Total Amount:</span>
-            <span className="font-black text-rose-600 text-sm">₹{totalPrice}</span>
+            <span className="text-gray-500 font-semibold">Total Package Price:</span>
+            <span className="font-bold text-gray-900 dark:text-white">₹{totalPrice}</span>
           </div>
+          <div className="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">Paid Now ({isDepositSelected ? "Deposit" : "Full"}):</span>
+            <span className="font-black text-emerald-600 text-sm">₹{payableAmount}</span>
+          </div>
+          {isDepositSelected && remainingAmount > 0 && (
+            <div className="flex justify-between bg-amber-50 dark:bg-amber-950/40 p-2 rounded-lg border border-amber-200 dark:border-amber-800">
+              <span className="text-amber-900 dark:text-amber-200 font-bold">Remaining Balance Due at Venue:</span>
+              <span className="font-black text-amber-900 dark:text-amber-200 text-sm">₹{remainingAmount}</span>
+            </div>
+          )}
         </div>
 
         <p className="text-xs text-gray-500 max-w-md mx-auto leading-relaxed">
@@ -301,7 +342,7 @@ export default function BookingFormClient({
                 UPI QR Code Payment
               </h2>
               <p className="text-xs text-gray-500 mt-1">
-                Scan using Google Pay, PhonePe, Paytm, or any UPI app to pay ₹{totalPrice}.
+                Scan using Google Pay, PhonePe, Paytm, or any UPI app to pay ₹{payableAmount}. {isDepositSelected ? `(Advance Deposit Amount. Remaining ₹${remainingAmount} payable at venue)` : ""}
               </p>
             </div>
 
@@ -321,7 +362,7 @@ export default function BookingFormClient({
                   className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-purple-600 via-rose-600 to-amber-600 hover:from-purple-700 hover:to-amber-700 text-white font-black text-sm shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 transition-all transform active:scale-95"
                 >
                   <span className="text-lg">📱</span>
-                  <span>Tap to Pay ₹{totalPrice} via UPI App</span>
+                  <span>Tap to Pay ₹{payableAmount} via UPI App</span>
                 </a>
                 <span className="text-[11px] text-gray-500 dark:text-gray-400 block text-center font-medium">
                   ⚡ Mobile Users: Tap button above to launch PhonePe, Google Pay, or Paytm directly!
@@ -369,8 +410,15 @@ export default function BookingFormClient({
               </div>
 
               <div className="text-center">
-                <span className="text-[11px] font-bold text-gray-500 uppercase block">Payable Amount</span>
-                <span className="text-3xl font-black text-rose-600">₹{totalPrice}</span>
+                <span className="text-[11px] font-bold text-gray-500 uppercase block">
+                  {isDepositSelected ? "Advance Deposit Amount (Payable Now)" : "Payable Amount"}
+                </span>
+                <span className="text-3xl font-black text-rose-600">₹{payableAmount}</span>
+                {isDepositSelected && (
+                  <span className="text-xs text-amber-700 dark:text-amber-300 block font-bold mt-1">
+                    Remaining Balance ₹{remainingAmount} payable at venue
+                  </span>
+                )}
               </div>
 
               {/* UPI ID Copy Box */}
@@ -441,6 +489,51 @@ export default function BookingFormClient({
           </div>
         )}
 
+        {/* Deposit Payment Mode Selector (If enabled by branch manager) */}
+        {branch.depositModeEnabled && branch.depositAmount > 0 && (
+          <div className="p-5 rounded-3xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                ⚡ Select Payment Mode
+              </label>
+              <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-2.5 py-0.5 rounded-full">
+                Advance Deposit Available
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setPaymentType("FULL")}
+                className={`p-4 rounded-2xl border text-left transition-all ${
+                  paymentType === "FULL"
+                    ? "border-rose-600 bg-rose-600 text-white font-bold shadow-md ring-2 ring-rose-500 scale-[1.01]"
+                    : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="text-xs font-bold uppercase">💳 Full Payment</div>
+                <div className="text-lg font-black mt-1">Pay ₹{totalPrice} Now</div>
+                <div className="text-[11px] opacity-80 mt-0.5">100% complete payment online</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentType("DEPOSIT")}
+                className={`p-4 rounded-2xl border text-left transition-all ${
+                  paymentType === "DEPOSIT"
+                    ? "border-amber-600 bg-amber-600 text-white font-bold shadow-md ring-2 ring-amber-500 scale-[1.01]"
+                    : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="text-xs font-bold uppercase">🏦 Pay Advance Deposit</div>
+                <div className="text-lg font-black mt-1">Pay ₹{Math.min(branch.depositAmount, totalPrice)} Now</div>
+                <div className="text-[11px] opacity-80 mt-0.5">
+                  Remaining ₹{Math.max(0, totalPrice - Math.min(branch.depositAmount, totalPrice))} due at venue
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Step 1: Select Hall (if branch has multiple halls) */}
         {activeHalls.length > 0 && (
           <div>
@@ -462,7 +555,7 @@ export default function BookingFormClient({
                     }`}
                   >
                     <span>🏛️ {h.name}</span>
-                    <span className="opacity-80">({h.capacity || 15} guests)</span>
+                    {h.capacity ? <span className="opacity-80">({h.capacity} guests)</span> : null}
                   </button>
                 );
               })}
@@ -612,37 +705,107 @@ export default function BookingFormClient({
           </div>
         </div>
 
-        {/* Step 4: Optional Add-Ons */}
+        {/* Step 5: Optional Add-Ons */}
         <div>
           <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
             5. Optional Celebration Add-Ons
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {activeAddOns.map((addon) => {
-              const isChecked = selectedAddOns.includes(addon.id);
+              const qty = selectedAddOns[addon.id] || 0;
+              const isChecked = qty > 0;
+              const itemTotal = addon.price * (qty || 1);
+
               return (
-                <button
+                <div
                   key={addon.id}
-                  type="button"
-                  onClick={() => toggleAddOn(addon.id)}
-                  className={`p-3 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-colors ${
+                  onClick={() => toggleAddOn(addon)}
+                  className={`p-3.5 rounded-2xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-2 ${
                     isChecked
-                      ? "border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 font-bold"
-                      : "border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300"
+                      ? "border-amber-500 bg-amber-50/60 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 font-bold shadow-xs"
+                      : "border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 bg-white dark:bg-gray-900"
                   }`}
                 >
-                  <span>{addon.name}</span>
-                  <span className="text-rose-600 font-bold">+₹{addon.price}</span>
-                </button>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold truncate">{addon.name}</span>
+                    <span className="text-rose-600 font-black shrink-0">+₹{itemTotal}</span>
+                  </div>
+
+                  {(addon.isQuantityBased || addon.name.toLowerCase().includes("fire") || addon.name.toLowerCase().includes("gun")) && isChecked && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center justify-between bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-amber-300 dark:border-amber-700 mt-1"
+                    >
+                      <span className="text-[11px] font-bold text-amber-900 dark:text-amber-200">
+                        Quantity:
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => updateAddOnQty(addon.id, -1, e)}
+                          className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-900/60 hover:bg-amber-200 text-amber-900 dark:text-amber-200 font-black text-xs flex items-center justify-center"
+                        >
+                          -
+                        </button>
+                        <span className="font-mono font-black text-sm px-1 min-w-4 text-center">
+                          {qty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => updateAddOnQty(addon.id, 1, e)}
+                          className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-900/60 hover:bg-amber-200 text-amber-900 dark:text-amber-200 font-black text-xs flex items-center justify-center"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
         </div>
 
-        {/* Step 5: Contact & Personal Details */}
+        {/* Step 6: Compulsory Event Category */}
         <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-4">
-          <label className="block text-sm font-bold text-gray-900 dark:text-white">
-            6. Contact & Personal Details
+          <div>
+            <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
+              6. Event Category *
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[
+                "🎂 Birthday",
+                "💍 Anniversary",
+                "👶 Baby Shower",
+                "👰 Bride to Be",
+                "🕯️ Candle Light Dinner",
+                "💍 Proposal",
+                "🎉 Groom to Be",
+                "🎓 Graduation",
+                "✨ Other",
+              ].map((cat) => {
+                const cleanCatName = cat.replace(/^[^\w\s]+/, "").trim();
+                const isSelected = eventCategory === cleanCatName || eventCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setEventCategory(cleanCatName)}
+                    className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-left flex items-center gap-1.5 ${
+                      isSelected
+                        ? "border-rose-600 bg-rose-600 text-white shadow-sm"
+                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:border-gray-300"
+                    }`}
+                  >
+                    <span>{cat}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <label className="block text-sm font-bold text-gray-900 dark:text-white pt-2">
+            7. Contact & Personal Details
           </label>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

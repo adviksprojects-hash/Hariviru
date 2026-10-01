@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getBranchSlotStatusForDate, getBranchCalendarBookingsForMonth } from "@/lib/actions";
+import { getBranchSlotStatusForDate, getBranchCalendarBookingsForMonth, toggleSlotDisabledDate } from "@/lib/actions";
 import ManagerOfflineBookingModal from "../bookings/ManagerOfflineBookingModal";
 
 export default function ManagerCalendarClient({ branch, halls = [], packages = [], addOns = [] }) {
@@ -108,6 +108,17 @@ export default function ManagerCalendarClient({ branch, halls = [], packages = [
   const handleBookingCreated = () => {
     fetchMonthBookings();
     fetchDaySlots();
+  };
+
+  const handleToggleDateDisable = async (slotId) => {
+    try {
+      const res = await toggleSlotDisabledDate(slotId, selectedDateStr);
+      if (res.success) {
+        fetchDaySlots();
+      }
+    } catch (err) {
+      alert("Failed to toggle slot date availability: " + err.message);
+    }
   };
 
   return (
@@ -291,7 +302,11 @@ export default function ManagerCalendarClient({ branch, halls = [], packages = [
                         {s.title}
                       </div>
 
-                      {isBooked ? (
+                      {s.isDisabledForDate ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold">
+                          🚫 DISABLED FOR DATE
+                        </span>
+                      ) : isBooked ? (
                         <span className="px-2.5 py-0.5 rounded-full bg-rose-600 text-white text-[11px] font-extrabold shadow-xs">
                           🔴 BOOKED
                         </span>
@@ -308,7 +323,6 @@ export default function ManagerCalendarClient({ branch, halls = [], packages = [
 
                     <div className="text-xs text-gray-500 flex items-center justify-between">
                       <span>🕒 {s.startTime} - {s.endTime}</span>
-                      <span className="font-bold text-rose-600">₹{s.price}</span>
                     </div>
 
                     {/* If Booked, display customer details */}
@@ -332,15 +346,30 @@ export default function ManagerCalendarClient({ branch, halls = [], packages = [
                       </div>
                     )}
 
-                    {/* Quick action button for available slot */}
-                    {isAvailable && (
-                      <button
-                        onClick={() => handleOpenOfflineModal(s.id)}
-                        className="mt-3 w-full py-2 rounded-xl bg-white dark:bg-gray-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-50 transition-colors shadow-2xs"
-                      >
-                        + Book Walk-in for this Slot
-                      </button>
-                    )}
+                    {/* Controls: Book Walk-in or Disable/Enable for Date */}
+                    <div className="mt-3 flex items-center gap-2">
+                      {isAvailable && (
+                        <button
+                          onClick={() => handleOpenOfflineModal(s.id)}
+                          className="flex-1 py-1.5 rounded-xl bg-white dark:bg-gray-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-50 transition-colors shadow-2xs"
+                        >
+                          + Walk-in Book
+                        </button>
+                      )}
+
+                      {!isBooked && (
+                        <button
+                          onClick={() => handleToggleDateDisable(s.id)}
+                          className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all shadow-2xs ${
+                            s.isDisabledForDate
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                              : "bg-amber-100 hover:bg-amber-200 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+                          }`}
+                        >
+                          {s.isDisabledForDate ? "Enable for Date ✓" : "Disable for Date 🚫"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}

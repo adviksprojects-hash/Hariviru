@@ -31,7 +31,9 @@ export default function ManagerOfflineBookingModal({
   const [loadingSlots, setLoadingSlots] = useState(true);
 
   const [selectedSlotId, setSelectedSlotId] = useState(initialSlotId || "");
-  const [selectedAddOns, setSelectedAddOns] = useState([]);
+  const [selectedAddOns, setSelectedAddOns] = useState({}); // { [addonId]: quantity }
+  const [eventCategory, setEventCategory] = useState("");
+  const [paymentType, setPaymentType] = useState("FULL");
 
   // Customer & Payment Fields
   const [customerName, setCustomerName] = useState("");
@@ -82,10 +84,11 @@ export default function ManagerOfflineBookingModal({
   const selectedHall = activeHalls.find((h) => h.id === selectedHallId) || activeHalls[0];
   const selectedSlot = slotStatuses.find((s) => s.id === selectedSlotId);
 
-  // Calculate total price: Package price + selected add-ons
-  const addOnsTotal = selectedAddOns.reduce((sum, addonId) => {
+  // Calculate total price: Package price + selected add-ons * quantity
+  const addOnsTotal = Object.entries(selectedAddOns).reduce((sum, [addonId, qty]) => {
+    if (!qty || qty <= 0) return sum;
     const addon = activeAddOns.find((a) => a.id === addonId);
-    return sum + (addon ? addon.price : 0);
+    return sum + (addon ? addon.price * qty : 0);
   }, 0);
 
   const basePackagePrice = selectedPackage
@@ -94,11 +97,27 @@ export default function ManagerOfflineBookingModal({
 
   const totalPrice = basePackagePrice + addOnsTotal;
 
-  const toggleAddOn = (addonId) => {
-    if (selectedAddOns.includes(addonId)) {
-      setSelectedAddOns(selectedAddOns.filter((id) => id !== addonId));
+  const toggleAddOn = (addon) => {
+    const currentQty = selectedAddOns[addon.id] || 0;
+    if (currentQty > 0) {
+      const updated = { ...selectedAddOns };
+      delete updated[addon.id];
+      setSelectedAddOns(updated);
     } else {
-      setSelectedAddOns([...selectedAddOns, addonId]);
+      setSelectedAddOns({ ...selectedAddOns, [addon.id]: 1 });
+    }
+  };
+
+  const updateAddOnQty = (addonId, delta, e) => {
+    e.stopPropagation();
+    const currentQty = selectedAddOns[addonId] || 1;
+    const newQty = currentQty + delta;
+    if (newQty <= 0) {
+      const updated = { ...selectedAddOns };
+      delete updated[addonId];
+      setSelectedAddOns(updated);
+    } else {
+      setSelectedAddOns({ ...selectedAddOns, [addonId]: newQty });
     }
   };
 
@@ -107,6 +126,10 @@ export default function ManagerOfflineBookingModal({
 
     if (!selectedSlotId) {
       setError("Please select an available time slot for your chosen date & hall.");
+      return;
+    }
+    if (!eventCategory || !eventCategory.trim()) {
+      setError("Event Category is required (e.g., Birthday, Anniversary).");
       return;
     }
     if (!customerName || !customerPhone) {
@@ -123,8 +146,15 @@ export default function ManagerOfflineBookingModal({
     setLoading(true);
     setError(null);
 
-    const selectedAddOnNames = selectedAddOns
-      .map((id) => activeAddOns.find((a) => a.id === id)?.name)
+    const selectedAddOnStrings = Object.entries(selectedAddOns)
+      .filter(([_, qty]) => qty > 0)
+      .map(([addonId, qty]) => {
+        const addon = activeAddOns.find((a) => a.id === addonId);
+        if (!addon) return null;
+        return addon.isQuantityBased
+          ? `${addon.name} (Qty: ${qty}, ₹${addon.price * qty})`
+          : `${addon.name} (₹${addon.price})`;
+      })
       .filter(Boolean);
 
     try {
@@ -142,7 +172,9 @@ export default function ManagerOfflineBookingModal({
         notes,
         paymentStatus,
         packageName: selectedPackage ? selectedPackage.name : null,
-        selectedAddOns: selectedAddOnNames,
+        selectedAddOns: selectedAddOnStrings,
+        eventCategory,
+        paymentType,
       });
 
       if (res.success) {
@@ -224,7 +256,7 @@ export default function ManagerOfflineBookingModal({
                       }`}
                     >
                       <span>🏛️ {h.name}</span>
-                      <span className="opacity-80">({h.capacity || 15} guests)</span>
+                      {h.capacity ? <span className="opacity-80">({h.capacity} guests)</span> : null}
                     </button>
                   );
                 })}
@@ -384,33 +416,104 @@ export default function ManagerOfflineBookingModal({
               <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
                 5. Optional Celebration Add-Ons
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {activeAddOns.map((addon) => {
-                  const isChecked = selectedAddOns.includes(addon.id);
+                  const qty = selectedAddOns[addon.id] || 0;
+                  const isChecked = qty > 0;
+                  const itemTotal = addon.price * (qty || 1);
+
                   return (
-                    <button
+                    <div
                       key={addon.id}
-                      type="button"
-                      onClick={() => toggleAddOn(addon.id)}
-                      className={`p-2.5 rounded-xl border text-left text-xs font-semibold flex items-center justify-between transition-colors ${
+                      onClick={() => toggleAddOn(addon)}
+                      className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
                         isChecked
-                          ? "border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 font-bold"
-                          : "border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300"
+                          ? "border-amber-500 bg-amber-50/60 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 font-bold"
+                          : "border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 bg-white dark:bg-gray-900"
                       }`}
                     >
-                      <span className="truncate">{addon.name}</span>
-                      <span className="text-rose-600 font-bold text-[11px] shrink-0 ml-1">+₹{addon.price}</span>
-                    </button>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="truncate text-xs">{addon.name}</span>
+                        <span className="text-rose-600 font-black text-[11px] shrink-0">+₹{itemTotal}</span>
+                      </div>
+
+                      {(addon.isQuantityBased || addon.name.toLowerCase().includes("fire") || addon.name.toLowerCase().includes("gun")) && isChecked && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center justify-between bg-white dark:bg-gray-800 p-1 rounded-lg border border-amber-300 dark:border-amber-700 mt-0.5"
+                        >
+                          <span className="text-[10px] font-bold text-amber-900 dark:text-amber-200">
+                            Qty:
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => updateAddOnQty(addon.id, -1, e)}
+                              className="w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-black text-xs flex items-center justify-center"
+                            >
+                              -
+                            </button>
+                            <span className="font-mono font-black text-xs px-1 text-center">
+                              {qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => updateAddOnQty(addon.id, 1, e)}
+                              className="w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-black text-xs flex items-center justify-center"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
             </div>
           )}
 
-          {/* 5. Customer Contact & Payment Status Details */}
+          {/* 5. Compulsory Event Category */}
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-800 space-y-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+              6. Event Category *
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[
+                "🎂 Birthday",
+                "💍 Anniversary",
+                "👶 Baby Shower",
+                "👰 Bride to Be",
+                "🕯️ Candle Light Dinner",
+                "💍 Proposal",
+                "🎉 Groom to Be",
+                "🎓 Graduation",
+                "✨ Other",
+              ].map((cat) => {
+                const cleanCatName = cat.replace(/^[^\w\s]+/, "").trim();
+                const isSelected = eventCategory === cleanCatName || eventCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setEventCategory(cleanCatName)}
+                    className={`p-2 rounded-xl border text-xs font-bold transition-all text-left flex items-center gap-1 ${
+                      isSelected
+                        ? "border-rose-600 bg-rose-600 text-white shadow-xs"
+                        : "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    <span>{cat}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 6. Customer Contact & Payment Status Details */}
           <div className="pt-3 border-t border-gray-200 dark:border-gray-800 space-y-3">
             <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-              6. Customer & Offline Payment Information
+              7. Customer & Offline Payment Information
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -448,6 +551,44 @@ export default function ManagerOfflineBookingModal({
                 />
               </div>
             </div>
+
+            {branch.depositModeEnabled && branch.depositAmount > 0 && (
+              <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                  Payment Mode Selection
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentType("FULL");
+                      setPaymentStatus("PAID");
+                    }}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                      paymentType === "FULL"
+                        ? "border-rose-600 bg-rose-600 text-white shadow-xs"
+                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    💳 Full Payment (₹{totalPrice})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentType("DEPOSIT");
+                      setPaymentStatus("PARTIAL");
+                    }}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                      paymentType === "DEPOSIT"
+                        ? "border-amber-600 bg-amber-600 text-white shadow-xs"
+                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    🏦 Pay Deposit (₹{Math.min(branch.depositAmount, totalPrice)})
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>

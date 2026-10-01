@@ -25,7 +25,7 @@ export default function ContactPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           
           {/* Customer Support Phone */}
           <a
@@ -53,6 +53,19 @@ export default function ContactPage() {
             <h3 className="font-bold text-gray-900 dark:text-white">WhatsApp Chat</h3>
             <p className="text-sm font-bold text-emerald-600 mt-1">+91 {contactInfo.whatsapp}</p>
             <p className="text-xs text-gray-400 mt-0.5">Instant WhatsApp Assistance</p>
+          </a>
+
+          {/* Official Email */}
+          <a
+            href="mailto:haruvirucelebrationhouse@gmail.com"
+            className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-6 rounded-3xl border border-gray-200 dark:border-gray-800 text-center hover:border-amber-500 transition-colors shadow-xs group"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950 flex items-center justify-center mx-auto mb-3 shadow-xs text-2xl">
+              ✉️
+            </div>
+            <h3 className="font-bold text-gray-900 dark:text-white">Official Email</h3>
+            <p className="text-xs font-bold text-amber-600 mt-1 truncate">haruvirucelebrationhouse@gmail.com</p>
+            <p className="text-xs text-gray-400 mt-0.5">Email Support & Inquiries</p>
           </a>
 
           {/* Headquarters Location: Shikrapur Pune */}

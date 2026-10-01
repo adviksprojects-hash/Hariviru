@@ -94,7 +94,7 @@ export default function BranchAvailableSlotsClient({ branchId, branchSlug }) {
                       : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200"
                   }`}
                 >
-                  🏛️ {h.name} ({h.capacity || 15} guests)
+                  🏛️ {h.name}{h.capacity ? ` (${h.capacity} guests)` : ""}
                 </button>
               );
             })}

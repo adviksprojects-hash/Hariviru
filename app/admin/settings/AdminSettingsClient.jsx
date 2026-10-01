@@ -36,6 +36,7 @@ export default function AdminSettingsClient({ initialPackages, initialAddOns }) 
   const [addOnFormData, setAddOnFormData] = useState({
     name: "",
     price: "",
+    isQuantityBased: false,
   });
 
   // --- PACKAGE HANDLERS ---
@@ -132,7 +133,7 @@ export default function AdminSettingsClient({ initialPackages, initialAddOns }) 
   // --- ADD-ON HANDLERS ---
   const handleOpenAddAddOn = () => {
     setEditingAddOn(null);
-    setAddOnFormData({ name: "", price: "" });
+    setAddOnFormData({ name: "", price: "", isQuantityBased: false });
     setError("");
     setSuccess("");
     setShowAddOnModal(true);
@@ -140,7 +141,11 @@ export default function AdminSettingsClient({ initialPackages, initialAddOns }) 
 
   const handleOpenEditAddOn = (addon) => {
     setEditingAddOn(addon);
-    setAddOnFormData({ name: addon.name, price: addon.price });
+    setAddOnFormData({
+      name: addon.name,
+      price: addon.price,
+      isQuantityBased: addon.isQuantityBased || false,
+    });
     setError("");
     setSuccess("");
     setShowAddOnModal(true);
@@ -157,6 +162,7 @@ export default function AdminSettingsClient({ initialPackages, initialAddOns }) 
         const res = await updateAddOn(editingAddOn.id, {
           name: addOnFormData.name,
           price: addOnFormData.price,
+          isQuantityBased: addOnFormData.isQuantityBased,
         });
         if (res.success) {
           setAddOns((prev) =>
@@ -171,6 +177,7 @@ export default function AdminSettingsClient({ initialPackages, initialAddOns }) 
           branchId: null,
           name: addOnFormData.name,
           price: addOnFormData.price,
+          isQuantityBased: addOnFormData.isQuantityBased,
         });
         if (res.success) {
           setAddOns((prev) => [...prev, res.addOn]);
@@ -342,11 +349,16 @@ export default function AdminSettingsClient({ initialPackages, initialAddOns }) 
                 className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-200 dark:border-gray-800 shadow-xs flex items-center justify-between"
               >
                 <div>
-                  <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     {addon.name}
+                    {addon.isQuantityBased && (
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+                        Per Qty
+                      </span>
+                    )}
                   </h3>
                   <div className="text-xl font-black text-rose-600 mt-1">
-                    +₹{addon.price}
+                    +₹{addon.price} {addon.isQuantityBased ? "/ unit" : ""}
                   </div>
                 </div>
 
@@ -505,6 +517,19 @@ export default function AdminSettingsClient({ initialPackages, initialAddOns }) 
                   placeholder="200"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm font-medium text-gray-900 dark:text-white"
                 />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+                <input
+                  type="checkbox"
+                  id="adminIsQtyBased"
+                  checked={addOnFormData.isQuantityBased}
+                  onChange={(e) => setAddOnFormData({ ...addOnFormData, isQuantityBased: e.target.checked })}
+                  className="w-4 h-4 text-rose-600 rounded border-gray-300 focus:ring-rose-500 cursor-pointer"
+                />
+                <label htmlFor="adminIsQtyBased" className="text-xs font-semibold text-gray-800 dark:text-gray-200 cursor-pointer select-none">
+                  🔢 Based on Quantity (User can select count with + / -)
+                </label>
               </div>
 
               <div className="flex justify-end gap-3 pt-3">

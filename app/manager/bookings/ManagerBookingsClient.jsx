@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { updateBookingStatus } from "@/lib/actions";
+import { updateBookingStatus, settleBookingBalance } from "@/lib/actions";
 import { buildWhatsAppConfirmationText } from "@/lib/whatsapp";
 import ManagerOfflineBookingModal from "./ManagerOfflineBookingModal";
 
@@ -55,6 +55,18 @@ export default function ManagerBookingsClient({
       }
     } catch (err) {
       alert("Error updating booking status: " + err.message);
+    }
+  };
+
+  const handleSettleBalance = async (bookingId) => {
+    try {
+      const res = await settleBookingBalance(bookingId);
+      if (res.success) {
+        setBookings(bookings.map((b) => (b.id === bookingId ? res.booking : b)));
+        alert("✅ Remaining balance settled! Booking marked as FULLY PAID.");
+      }
+    } catch (err) {
+      alert("Error settling balance: " + err.message);
     }
   };
 
@@ -267,6 +279,24 @@ export default function ManagerBookingsClient({
                         <div className="font-black text-rose-600 text-base">
                           ₹{b.totalAmount}
                         </div>
+
+                        {b.paymentStatus === "PARTIAL" || (b.remainingAmount && b.remainingAmount > 0) ? (
+                          <div className="mt-1 space-y-1">
+                            <div className="text-[11px] font-bold text-emerald-600">
+                              Paid: ₹{b.paidAmount || 0}
+                            </div>
+                            <div className="text-[11px] font-bold text-amber-600">
+                              Balance: ₹{b.remainingAmount || (b.totalAmount - (b.paidAmount || 0))}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleSettleBalance(b.id)}
+                              className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] shadow-xs transition-colors block"
+                            >
+                              ✓ Settle Balance (Mark Paid)
+                            </button>
+                          </div>
+                        ) : null}
 
                         {/* Transaction / UTR ID display */}
                         {(() => {

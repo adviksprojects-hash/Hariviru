@@ -11,6 +11,7 @@ import {
   createAddOn,
   updateAddOn,
   deleteAddOn,
+  updateBranchDepositSettings,
 } from "@/lib/actions";
 
 export default function ManagerSettingsClient({
@@ -27,6 +28,10 @@ export default function ManagerSettingsClient({
   const [branchAddOns, setBranchAddOns] = useState(initialBranchAddOns);
   const [allGlobalAddOns, setAllGlobalAddOns] = useState(globalAddOns);
 
+  // Deposit settings state
+  const [depositModeEnabled, setDepositModeEnabled] = useState(branch?.depositModeEnabled || false);
+  const [depositAmount, setDepositAmount] = useState(branch?.depositAmount || 500);
+
   const [activeTab, setActiveTab] = useState("halls");
 
   const [loading, setLoading] = useState(false);
@@ -36,7 +41,7 @@ export default function ManagerSettingsClient({
   // Hall Modal state
   const [showHallModal, setShowHallModal] = useState(false);
   const [editingHall, setEditingHall] = useState(null);
-  const [hallForm, setHallForm] = useState({ name: "", capacity: 15 });
+  const [hallForm, setHallForm] = useState({ name: "", capacity: "" });
 
   // Package Modal state
   const [showPkgModal, setShowPkgModal] = useState(false);
@@ -55,12 +60,13 @@ export default function ManagerSettingsClient({
   const [addOnForm, setAddOnForm] = useState({
     name: "",
     price: "",
+    isQuantityBased: false,
   });
 
   // --- HALL HANDLERS ---
   const handleOpenAddHall = () => {
     setEditingHall(null);
-    setHallForm({ name: `Hall ${halls.length + 1}`, capacity: 15 });
+    setHallForm({ name: `Hall ${halls.length + 1}`, capacity: "" });
     setError("");
     setSuccess("");
     setShowHallModal(true);
@@ -68,7 +74,7 @@ export default function ManagerSettingsClient({
 
   const handleOpenEditHall = (hall) => {
     setEditingHall(hall);
-    setHallForm({ name: hall.name, capacity: hall.capacity || 15 });
+    setHallForm({ name: hall.name, capacity: hall.capacity || "" });
     setError("");
     setSuccess("");
     setShowHallModal(true);
@@ -240,7 +246,7 @@ export default function ManagerSettingsClient({
   // --- ADD-ON HANDLERS ---
   const handleOpenAddAddOn = () => {
     setEditingAddOn(null);
-    setAddOnForm({ name: "", price: "" });
+    setAddOnForm({ name: "", price: "", isQuantityBased: false });
     setError("");
     setSuccess("");
     setShowAddOnModal(true);
@@ -248,7 +254,11 @@ export default function ManagerSettingsClient({
 
   const handleOpenEditAddOn = (addon) => {
     setEditingAddOn(addon);
-    setAddOnForm({ name: addon.name, price: addon.price });
+    setAddOnForm({
+      name: addon.name,
+      price: addon.price,
+      isQuantityBased: addon.isQuantityBased || false,
+    });
     setError("");
     setSuccess("");
     setShowAddOnModal(true);
@@ -265,6 +275,7 @@ export default function ManagerSettingsClient({
         const res = await updateAddOn(editingAddOn.id, {
           name: addOnForm.name,
           price: addOnForm.price,
+          isQuantityBased: addOnForm.isQuantityBased,
         });
         if (res.success) {
           if (editingAddOn.isGlobal) {
@@ -285,6 +296,7 @@ export default function ManagerSettingsClient({
           branchId: branch.id,
           name: addOnForm.name,
           price: addOnForm.price,
+          isQuantityBased: addOnForm.isQuantityBased,
         });
         if (res.success) {
           setBranchAddOns((prev) => [...prev, res.addOn]);
@@ -320,6 +332,25 @@ export default function ManagerSettingsClient({
     }
   };
 
+  const handleDepositSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await updateBranchDepositSettings(branch.id, depositModeEnabled, depositAmount);
+      if (res.success) {
+        setSuccess("Deposit Payment Mode configuration saved successfully!");
+      } else {
+        setError(res.error || "Failed to update deposit settings.");
+      }
+    } catch (err) {
+      setError(err.message || "Error updating deposit settings.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {error && (
@@ -334,10 +365,10 @@ export default function ManagerSettingsClient({
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-800 gap-4">
+      <div className="flex border-b border-gray-200 dark:border-gray-800 gap-4 overflow-x-auto">
         <button
           onClick={() => setActiveTab("halls")}
-          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${
+          className={`pb-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${
             activeTab === "halls"
               ? "border-rose-600 text-rose-600"
               : "border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white"
@@ -347,7 +378,7 @@ export default function ManagerSettingsClient({
         </button>
         <button
           onClick={() => setActiveTab("packages")}
-          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${
+          className={`pb-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${
             activeTab === "packages"
               ? "border-rose-600 text-rose-600"
               : "border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white"
@@ -357,13 +388,23 @@ export default function ManagerSettingsClient({
         </button>
         <button
           onClick={() => setActiveTab("addons")}
-          className={`pb-3 text-sm font-bold border-b-2 transition-colors ${
+          className={`pb-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${
             activeTab === "addons"
               ? "border-rose-600 text-rose-600"
               : "border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white"
           }`}
         >
           ✨ Celebration Add-Ons ({allGlobalAddOns.length + branchAddOns.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("payment")}
+          className={`pb-3 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${
+            activeTab === "payment"
+              ? "border-rose-600 text-rose-600"
+              : "border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white"
+          }`}
+        >
+          💳 Payment & Deposit Mode
         </button>
       </div>
 
@@ -398,9 +439,11 @@ export default function ManagerSettingsClient({
                     <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
                       Active Hall
                     </span>
-                    <span className="text-xs text-gray-400 font-semibold">
-                      👥 Capacity: {h.capacity || 15} guests
-                    </span>
+                    {h.capacity ? (
+                      <span className="text-xs text-gray-400 font-semibold">
+                        👥 Capacity: {h.capacity} guests
+                      </span>
+                    ) : null}
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-1">
                     {h.name}
@@ -668,6 +711,64 @@ export default function ManagerSettingsClient({
         </div>
       )}
 
+      {/* TAB 4: PAYMENT & DEPOSIT MODE */}
+      {activeTab === "payment" && (
+        <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 shadow-xs max-w-xl">
+          <div className="mb-6">
+            <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold uppercase tracking-wider">
+              Branch Payment Settings
+            </span>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-1">
+              Advance Deposit Payment Mode
+            </h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Enable customers to pay an advance deposit (e.g. ₹500) to reserve slots, with the remaining balance due at venue.
+            </p>
+          </div>
+
+          <form onSubmit={handleDepositSubmit} className="space-y-5">
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+              <input
+                type="checkbox"
+                id="depositModeChk"
+                checked={depositModeEnabled}
+                onChange={(e) => setDepositModeEnabled(e.target.checked)}
+                className="w-5 h-5 text-rose-600 rounded border-gray-300 focus:ring-rose-500 cursor-pointer"
+              />
+              <label htmlFor="depositModeChk" className="text-xs font-bold text-gray-900 dark:text-white cursor-pointer select-none">
+                Allow Customers to Pay Advance Deposit (instead of 100% full payment only)
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                Advance Deposit Amount (₹) *
+              </label>
+              <input
+                type="number"
+                min={50}
+                required
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                placeholder="500"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm font-bold text-gray-900 dark:text-white"
+              />
+              <span className="text-[11px] text-gray-400 block mt-1">
+                For deposit bookings, the QR Code will be generated for this exact amount (e.g. ₹500). Remaining balance is collected at venue.
+              </span>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-all"
+            >
+              {loading ? "Saving Configuration..." : "Save Deposit Settings"}
+            </button>
+          </form>
+        </div>
+      )}
+
       {/* HALL MODAL */}
       {showHallModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -859,6 +960,19 @@ export default function ManagerSettingsClient({
                   placeholder="200"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm font-medium text-gray-900 dark:text-white"
                 />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+                <input
+                  type="checkbox"
+                  id="mgrIsQtyBased"
+                  checked={addOnForm.isQuantityBased}
+                  onChange={(e) => setAddOnForm({ ...addOnForm, isQuantityBased: e.target.checked })}
+                  className="w-4 h-4 text-rose-600 rounded border-gray-300 focus:ring-rose-500 cursor-pointer"
+                />
+                <label htmlFor="mgrIsQtyBased" className="text-xs font-semibold text-gray-800 dark:text-gray-200 cursor-pointer select-none">
+                  🔢 Based on Quantity (User can select count with + / -)
+                </label>
               </div>
 
               <div className="flex justify-end gap-3 pt-3">

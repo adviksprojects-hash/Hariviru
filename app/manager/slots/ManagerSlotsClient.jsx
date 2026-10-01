@@ -10,6 +10,69 @@ import {
   getBranchSlotStatusForDate,
 } from "@/lib/actions";
 
+function parse12hParts(timeStr) {
+  if (!timeStr) return { hour: "09", minute: "00", ampm: "AM" };
+  const str = timeStr.trim().toUpperCase();
+  const isPm = str.includes("PM");
+  const clean = str.replace(/(AM|PM)/g, "").trim();
+  const parts = clean.split(":");
+  let h = parseInt(parts[0], 10) || 12;
+  let m = parts[1] || "00";
+  if (h > 12) h = h - 12;
+  if (h === 0) h = 12;
+  return {
+    hour: String(h).padStart(2, "0"),
+    minute: String(parseInt(m, 10) || 0).padStart(2, "0"),
+    ampm: isPm || (parseInt(parts[0], 10) >= 12 && !str.includes("AM")) ? "PM" : "AM",
+  };
+}
+
+function Time12HourSelect({ label, hour, setHour, minute, setMinute, ampm, setAmpm }) {
+  const hours = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+  const minutes = ["00", "15", "30", "45"];
+
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+        {label}
+      </label>
+      <div className="flex items-center gap-1.5">
+        <select
+          value={hour}
+          onChange={(e) => setHour(e.target.value)}
+          className="flex-1 px-2.5 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-xs font-bold text-gray-900 dark:text-white"
+        >
+          {hours.map((h) => (
+            <option key={h} value={h}>
+              {h}
+            </option>
+          ))}
+        </select>
+        <span className="font-bold text-gray-400">:</span>
+        <select
+          value={minute}
+          onChange={(e) => setMinute(e.target.value)}
+          className="flex-1 px-2.5 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-xs font-bold text-gray-900 dark:text-white"
+        >
+          {minutes.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+        <select
+          value={ampm}
+          onChange={(e) => setAmpm(e.target.value)}
+          className="px-3 py-2 rounded-xl bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 text-xs font-black cursor-pointer"
+        >
+          <option value="AM">AM</option>
+          <option value="PM">PM</option>
+        </select>
+      </div>
+    </div>
+  );
+}
+
 export default function ManagerSlotsClient({ branch, initialSlots }) {
   const todayStr = new Date().toISOString().split("T")[0];
 
@@ -18,16 +81,26 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
   const [dateSlotStatuses, setDateSlotStatuses] = useState([]);
   const [loadingDateSlots, setLoadingDateSlots] = useState(false);
 
-  // Add slot state
+  // Add slot state (12-hour clock format)
   const [title, setTitle] = useState("");
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("13:00");
+  const [startHour, setStartHour] = useState("09");
+  const [startMinute, setStartMinute] = useState("00");
+  const [startAmpm, setStartAmpm] = useState("AM");
+
+  const [endHour, setEndHour] = useState("01");
+  const [endMinute, setEndMinute] = useState("00");
+  const [endAmpm, setEndAmpm] = useState("PM");
 
   // Edit slot modal state
   const [editingSlot, setEditingSlot] = useState(null);
   const [editTitle, setEditTitle] = useState("");
-  const [editStartTime, setEditStartTime] = useState("09:00");
-  const [editEndTime, setEditEndTime] = useState("13:00");
+  const [editStartHour, setEditStartHour] = useState("09");
+  const [editStartMinute, setEditStartMinute] = useState("00");
+  const [editStartAmpm, setEditStartAmpm] = useState("AM");
+
+  const [editEndHour, setEditEndHour] = useState("01");
+  const [editEndMinute, setEditEndMinute] = useState("00");
+  const [editEndAmpm, setEditEndAmpm] = useState("PM");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -56,12 +129,15 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
     setLoading(true);
     setError(null);
 
+    const formattedStart = `${startHour}:${startMinute} ${startAmpm}`;
+    const formattedEnd = `${endHour}:${endMinute} ${endAmpm}`;
+
     try {
       const res = await createSlot({
         branchId: branch.id,
         title,
-        startTime,
-        endTime,
+        startTime: formattedStart,
+        endTime: formattedEnd,
         price: 0,
       });
 
@@ -80,8 +156,16 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
   const handleEditSlot = (slot) => {
     setEditingSlot(slot);
     setEditTitle(slot.title);
-    setEditStartTime(slot.startTime);
-    setEditEndTime(slot.endTime);
+    const startP = parse12hParts(slot.startTime);
+    const endP = parse12hParts(slot.endTime);
+
+    setEditStartHour(startP.hour);
+    setEditStartMinute(startP.minute);
+    setEditStartAmpm(startP.ampm);
+
+    setEditEndHour(endP.hour);
+    setEditEndMinute(endP.minute);
+    setEditEndAmpm(endP.ampm);
   };
 
   const handleSaveEdit = async (e) => {
@@ -89,11 +173,14 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
     if (!editingSlot) return;
     setLoading(true);
 
+    const formattedStart = `${editStartHour}:${editStartMinute} ${editStartAmpm}`;
+    const formattedEnd = `${editEndHour}:${editEndMinute} ${editEndAmpm}`;
+
     try {
       const res = await updateSlot(editingSlot.id, {
         title: editTitle,
-        startTime: editStartTime,
-        endTime: editEndTime,
+        startTime: formattedStart,
+        endTime: formattedEnd,
       });
 
       if (res.success) {
@@ -388,32 +475,25 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Start Time *
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={editStartTime}
-                    onChange={(e) => setEditStartTime(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    End Time *
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={editEndTime}
-                    onChange={(e) => setEditEndTime(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Time12HourSelect
+                  label="Start Time *"
+                  hour={editStartHour}
+                  setHour={setEditStartHour}
+                  minute={editStartMinute}
+                  setMinute={setEditStartMinute}
+                  ampm={editStartAmpm}
+                  setAmpm={setEditStartAmpm}
+                />
+                <Time12HourSelect
+                  label="End Time *"
+                  hour={editEndHour}
+                  setHour={setEditEndHour}
+                  minute={editEndMinute}
+                  setMinute={setEditEndMinute}
+                  ampm={editEndAmpm}
+                  setAmpm={setEditEndAmpm}
+                />
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
@@ -464,27 +544,25 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Start Time *</label>
-              <input
-                type="time"
-                required
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
-              />
-            </div>
+            <Time12HourSelect
+              label="Start Time *"
+              hour={startHour}
+              setHour={setStartHour}
+              minute={startMinute}
+              setMinute={setStartMinute}
+              ampm={startAmpm}
+              setAmpm={setStartAmpm}
+            />
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">End Time *</label>
-              <input
-                type="time"
-                required
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
-              />
-            </div>
+            <Time12HourSelect
+              label="End Time *"
+              hour={endHour}
+              setHour={setEndHour}
+              minute={endMinute}
+              setMinute={setEndMinute}
+              ampm={endAmpm}
+              setAmpm={setEndAmpm}
+            />
           </div>
 
           <button

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/prisma";
 import { getBranchHalls, getBranchPackages, getBranchAddOns } from "@/lib/actions";
+import { enrichBranchWithDepositSettings } from "@/lib/deposit-settings";
 import BookingFormClient from "./BookingFormClient";
 
 export async function generateMetadata({ params }) {
@@ -19,7 +20,7 @@ export default async function BookingPage({ params, searchParams }) {
   const initialDate = sp?.date || null;
   const initialHallId = sp?.hallId || null;
 
-  const branch = await db.branch.findUnique({
+  const rawBranch = await db.branch.findUnique({
     where: { slug: branchSlug },
     include: {
       slots: {
@@ -29,9 +30,11 @@ export default async function BookingPage({ params, searchParams }) {
     },
   });
 
-  if (!branch || !branch.isActive) {
+  if (!rawBranch || !rawBranch.isActive) {
     notFound();
   }
+
+  const branch = enrichBranchWithDepositSettings(rawBranch);
 
   const { halls } = await getBranchHalls(branch.id);
   const { packages } = await getBranchPackages(branch.id);
