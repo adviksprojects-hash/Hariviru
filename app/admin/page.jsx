@@ -20,9 +20,18 @@ export default async function AdminDashboardPage() {
 
   // //Fetch all branches with bookings for franchise-wise revenue analysis
   const branches = await db.branch.findMany({
-    include: {
+    select: {
+      id: true,
+      name: true,
+      city: true,
       bookings: {
         where: { bookingStatus: { in: ["CONFIRMED", "COMPLETED"] } },
+        select: {
+          id: true,
+          totalAmount: true,
+          bookingType: true,
+          bookingStatus: true,
+        },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -77,7 +86,19 @@ export default async function AdminDashboardPage() {
   const recentBookings = await db.booking.findMany({
     take: 5,
     orderBy: { createdAt: "desc" },
-    include: { branch: true },
+    select: {
+      id: true,
+      bookingNumber: true,
+      customerName: true,
+      customerPhone: true,
+      totalAmount: true,
+      bookingStatus: true,
+      branch: {
+        select: {
+          name: true,
+        },
+      },
+    },
   });
 
   return (

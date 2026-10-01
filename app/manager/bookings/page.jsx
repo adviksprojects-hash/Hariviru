@@ -28,6 +28,22 @@ export default async function ManagerBookingsPage() {
 
   const bookings = await db.booking.findMany({
     where: { branchId },
+    select: {
+      id: true,
+      bookingNumber: true,
+      customerName: true,
+      customerEmail: true,
+      customerPhone: true,
+      bookingDate: true,
+      totalAmount: true,
+      paymentStatus: true,
+      bookingStatus: true,
+      bookingType: true,
+      slotTitle: true,
+      hallName: true,
+      notes: true,
+      createdAt: true,
+    },
     orderBy: { bookingDate: "desc" },
   });
 

@@ -352,6 +352,49 @@ export default function BookingFormClient({
               </div>
             )}
 
+            {/* Step 2 Payment Mode Selection (Full vs Advance Deposit) */}
+            {branch.depositModeEnabled && branch.depositAmount > 0 && (
+              <div className="mb-5 p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2 text-left">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                    ⚡ Select Payment Amount Mode
+                  </label>
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-2 py-0.5 rounded-full">
+                    Advance Deposit Mode
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType("FULL")}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      paymentType === "FULL"
+                        ? "border-rose-600 bg-rose-600 text-white font-bold shadow-xs ring-2 ring-rose-500 scale-[1.01]"
+                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="text-[10px] font-bold uppercase">💳 Full Payment</div>
+                    <div className="text-base font-black mt-0.5">₹{totalPrice}</div>
+                    <div className="text-[10px] opacity-80">Pay 100% now</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType("DEPOSIT")}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      paymentType === "DEPOSIT"
+                        ? "border-amber-600 bg-amber-600 text-white font-bold shadow-xs ring-2 ring-amber-500 scale-[1.01]"
+                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="text-[10px] font-bold uppercase">🏦 Pay Deposit</div>
+                    <div className="text-base font-black mt-0.5">₹{Math.min(branch.depositAmount, totalPrice)}</div>
+                    <div className="text-[10px] opacity-80">Bal ₹{Math.max(0, totalPrice - Math.min(branch.depositAmount, totalPrice))} at venue</div>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* QR Code Container & Mobile Payment Options */}
             <div className="bg-gradient-to-b from-rose-50/50 to-amber-50/50 dark:from-gray-800 dark:to-gray-800/80 p-5 sm:p-6 rounded-3xl border border-rose-200/80 dark:border-gray-700 text-center space-y-4 mb-6">
               
@@ -486,51 +529,6 @@ export default function BookingFormClient({
         {error && (
           <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-semibold">
             ⚠️ {error}
-          </div>
-        )}
-
-        {/* Deposit Payment Mode Selector (If enabled by branch manager) */}
-        {branch.depositModeEnabled && branch.depositAmount > 0 && (
-          <div className="p-5 rounded-3xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
-                ⚡ Select Payment Mode
-              </label>
-              <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-2.5 py-0.5 rounded-full">
-                Advance Deposit Available
-              </span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setPaymentType("FULL")}
-                className={`p-4 rounded-2xl border text-left transition-all ${
-                  paymentType === "FULL"
-                    ? "border-rose-600 bg-rose-600 text-white font-bold shadow-md ring-2 ring-rose-500 scale-[1.01]"
-                    : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <div className="text-xs font-bold uppercase">💳 Full Payment</div>
-                <div className="text-lg font-black mt-1">Pay ₹{totalPrice} Now</div>
-                <div className="text-[11px] opacity-80 mt-0.5">100% complete payment online</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentType("DEPOSIT")}
-                className={`p-4 rounded-2xl border text-left transition-all ${
-                  paymentType === "DEPOSIT"
-                    ? "border-amber-600 bg-amber-600 text-white font-bold shadow-md ring-2 ring-amber-500 scale-[1.01]"
-                    : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <div className="text-xs font-bold uppercase">🏦 Pay Advance Deposit</div>
-                <div className="text-lg font-black mt-1">Pay ₹{Math.min(branch.depositAmount, totalPrice)} Now</div>
-                <div className="text-[11px] opacity-80 mt-0.5">
-                  Remaining ₹{Math.max(0, totalPrice - Math.min(branch.depositAmount, totalPrice))} due at venue
-                </div>
-              </button>
-            </div>
           </div>
         )}
 
