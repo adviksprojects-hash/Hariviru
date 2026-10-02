@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/rbac";
 import { db } from "@/lib/prisma";
+import ManagerRevenueCharts from "@/components/ManagerComponents/ManagerRevenueCharts";
 
 export const metadata = {
   title: "Manager Portal | HaruViru Celebration House",
@@ -80,7 +81,36 @@ export default async function ManagerDashboardPage() {
     );
   }
 
-  // Calculate branch stats
+  // Calculate Today's Date Range (Midnight to 11:59:59 PM)
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const todayBookings = await db.booking.findMany({
+    where: {
+      branchId: branch.id,
+      bookingDate: {
+        gte: todayStart,
+        lte: todayEnd,
+      },
+    },
+    select: {
+      id: true,
+      bookingType: true,
+      totalAmount: true,
+      bookingStatus: true,
+    },
+  });
+
+  const totalBookingsToday = todayBookings.length;
+  const onlineBookingsToday = todayBookings.filter((b) => b.bookingType === "ONLINE").length;
+  const offlineBookingsToday = todayBookings.filter((b) => b.bookingType === "OFFLINE").length;
+  const totalRevenueToday = todayBookings
+    .filter((b) => ["CONFIRMED", "COMPLETED"].includes(b.bookingStatus))
+    .reduce((sum, b) => sum + b.totalAmount, 0);
+
+  // Calculate All-Time branch stats
   const totalBookings = await db.booking.count({ where: { branchId: branch.id } });
   const pendingBookingsCount = await db.booking.count({ where: { branchId: branch.id, bookingStatus: "PENDING" } });
   const onlineBookingsCount = await db.booking.count({ where: { branchId: branch.id, bookingType: "ONLINE" } });
@@ -92,6 +122,18 @@ export default async function ManagerDashboardPage() {
   });
 
   const totalRevenue = revenueAggregate._sum.totalAmount || 0;
+
+  // Fetch confirmed/completed bookings for monthly lining & yearly bar revenue graphs
+  const confirmedBranchBookings = await db.booking.findMany({
+    where: { branchId: branch.id, bookingStatus: { in: ["CONFIRMED", "COMPLETED"] } },
+    select: { bookingDate: true, totalAmount: true, bookingType: true },
+  });
+
+  const rawBookings = confirmedBranchBookings.map((b) => ({
+    bookingDate: new Date(b.bookingDate).toISOString(),
+    totalAmount: b.totalAmount,
+    bookingType: b.bookingType,
+  }));
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10 px-4">
@@ -107,38 +149,6 @@ export default async function ManagerDashboardPage() {
               {branch.name}
             </h1>
             <p className="text-sm text-rose-100 mt-1">📍 {branch.address}, {branch.city}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/manager/bookings"
-              className="relative px-6 py-3 rounded-full bg-white text-rose-600 hover:bg-rose-50 font-bold text-sm shadow-md transition-all flex items-center gap-2"
-            >
-              <span>📋 Manage Bookings & Walk-ins</span>
-              {pendingBookingsCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white font-extrabold text-xs animate-pulse">
-                  {pendingBookingsCount} NEW
-                </span>
-              )}
-            </Link>
-            <Link
-              href="/manager/calendar"
-              className="px-6 py-3 rounded-full bg-amber-500/90 hover:bg-amber-600 text-white font-bold text-sm backdrop-blur-md border border-white/20 transition-all"
-            >
-              📅 Availability Calendar
-            </Link>
-            <Link
-              href="/manager/slots"
-              className="px-6 py-3 rounded-full bg-black/30 hover:bg-black/40 text-white font-bold text-sm backdrop-blur-md border border-white/20 transition-all"
-            >
-              ⏰ Manage Slots
-            </Link>
-            <Link
-              href="/manager/settings"
-              className="px-6 py-3 rounded-full bg-purple-700/80 hover:bg-purple-800 text-white font-bold text-sm backdrop-blur-md border border-white/20 transition-all"
-            >
-              ⚙️ Halls & Packages
-            </Link>
           </div>
         </div>
 
@@ -163,35 +173,46 @@ export default async function ManagerDashboardPage() {
           </div>
         )}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
-            <div className="text-xs font-semibold text-gray-500">Total Bookings</div>
-            <div className="text-3xl font-black text-gray-900 dark:text-white mt-1">{totalBookings}</div>
-            <div className="text-xs text-gray-400 mt-1">Online & Offline combined</div>
+        {/* 1. TODAY'S STATS GRID (Before Recent Branch Bookings) */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 text-xs font-bold uppercase tracking-wider">
+              Today's Overview
+            </span>
+            <h2 className="text-lg font-black text-gray-900 dark:text-white">
+              📅 Today's Live Performance
+            </h2>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
-            <div className="text-xs font-semibold text-gray-500">Online Bookings</div>
-            <div className="text-3xl font-black text-rose-600 mt-1">{onlineBookingsCount}</div>
-            <div className="text-xs text-gray-400 mt-1">Booked via Website</div>
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
+              <div className="text-xs font-semibold text-gray-500">Total Bookings Today</div>
+              <div className="text-3xl font-black text-gray-900 dark:text-white mt-1">{totalBookingsToday}</div>
+              <div className="text-xs text-gray-400 mt-1">Bookings scheduled for today</div>
+            </div>
 
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
-            <div className="text-xs font-semibold text-gray-500">Offline Walk-ins</div>
-            <div className="text-3xl font-black text-amber-600 mt-1">{offlineBookingsCount}</div>
-            <div className="text-xs text-gray-400 mt-1">Logged by Manager</div>
-          </div>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
+              <div className="text-xs font-semibold text-gray-500">Online Today</div>
+              <div className="text-3xl font-black text-rose-600 mt-1">{onlineBookingsToday}</div>
+              <div className="text-xs text-gray-400 mt-1">Website bookings today</div>
+            </div>
 
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
-            <div className="text-xs font-semibold text-gray-500">Total Revenue Generated</div>
-            <div className="text-3xl font-black text-emerald-600 mt-1">₹{totalRevenue.toLocaleString()}</div>
-            <div className="text-xs text-gray-400 mt-1">Confirmed revenue</div>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
+              <div className="text-xs font-semibold text-gray-500">Offline Today</div>
+              <div className="text-3xl font-black text-amber-600 mt-1">{offlineBookingsToday}</div>
+              <div className="text-xs text-gray-400 mt-1">Walk-ins logged today</div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
+              <div className="text-xs font-semibold text-gray-500">Total Revenue Today</div>
+              <div className="text-3xl font-black text-emerald-600 mt-1">₹{totalRevenueToday.toLocaleString()}</div>
+              <div className="text-xs text-gray-400 mt-1">Earnings generated today</div>
+            </div>
           </div>
         </div>
 
-        {/* Recent Bookings Table Preview */}
-        <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 shadow-xs">
+        {/* 2. RECENT BRANCH BOOKINGS TABLE PREVIEW */}
+        <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 shadow-xs mb-10">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Branch Bookings</h2>
@@ -267,6 +288,47 @@ export default async function ManagerDashboardPage() {
             </div>
           )}
         </div>
+
+        {/* 3. ALL-TIME STATS GRID (After Recent Branch Bookings) */}
+        <div className="mb-10">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider">
+              All-Time Summary
+            </span>
+            <h2 className="text-lg font-black text-gray-900 dark:text-white">
+              📊 Total Cumulative Performance
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
+              <div className="text-xs font-semibold text-gray-500">Total Bookings</div>
+              <div className="text-3xl font-black text-gray-900 dark:text-white mt-1">{totalBookings}</div>
+              <div className="text-xs text-gray-400 mt-1">Online & Offline combined</div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
+              <div className="text-xs font-semibold text-gray-500">Online Bookings</div>
+              <div className="text-3xl font-black text-rose-600 mt-1">{onlineBookingsCount}</div>
+              <div className="text-xs text-gray-400 mt-1">Booked via Website</div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
+              <div className="text-xs font-semibold text-gray-500">Offline Walk-ins</div>
+              <div className="text-3xl font-black text-amber-600 mt-1">{offlineBookingsCount}</div>
+              <div className="text-xs text-gray-400 mt-1">Logged by Manager</div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xs">
+              <div className="text-xs font-semibold text-gray-500">Total Revenue Generated</div>
+              <div className="text-3xl font-black text-emerald-600 mt-1">₹{totalRevenue.toLocaleString()}</div>
+              <div className="text-xs text-gray-400 mt-1">Confirmed revenue</div>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. REVENUE CHARTS (Monthly Lining Graph & Yearly Bar Format) */}
+        <ManagerRevenueCharts rawBookings={rawBookings} />
 
       </div>
     </main>

@@ -34,13 +34,11 @@ export default function AdminRevenueCharts({ rawBookings = [] }) {
     return list;
   }, [selectedYear]);
 
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState(() => {
-    const currentM = new Date().getMonth();
-    return currentM;
-  });
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(() => new Date().getMonth());
+  const [activeDayPoint, setActiveDayPoint] = useState(null);
 
   // --------------------------------------------------------------------------
-  // 1. DAY-WISE REVENUE DATA FOR SELECTED MONTH
+  // 1. DAY-WISE REVENUE DATA FOR SELECTED MONTH (BLUE LINING GRAPH)
   // --------------------------------------------------------------------------
   const dayWiseData = useMemo(() => {
     const daysCount = new Date(selectedYear, selectedMonthIndex + 1, 0).getDate();
@@ -76,6 +74,38 @@ export default function AdminRevenueCharts({ rawBookings = [] }) {
     return { days, maxDayRevenue };
   }, [bookings, selectedYear, selectedMonthIndex]);
 
+  // SVG Line Chart coordinates for Admin Blue Lining Graph
+  const svgWidth = 800;
+  const svgHeight = 220;
+  const paddingX = 30;
+  const paddingY = 30;
+
+  const dayPoints = useMemo(() => {
+    const days = dayWiseData.days;
+    if (days.length === 0) return [];
+    const stepX = (svgWidth - paddingX * 2) / (days.length - 1);
+    const usableH = svgHeight - paddingY * 2;
+
+    return days.map((d, idx) => {
+      const x = paddingX + idx * stepX;
+      const y = svgHeight - paddingY - (d.total / dayWiseData.maxDayRevenue) * usableH;
+      return { x, y, dayNum: d.dayNum, total: d.total, online: d.online, offline: d.offline, count: d.count };
+    });
+  }, [dayWiseData, svgWidth, svgHeight, paddingX, paddingY]);
+
+  const linePath = useMemo(() => {
+    if (dayPoints.length === 0) return "";
+    return dayPoints.reduce((acc, pt, i) => `${acc} ${i === 0 ? "M" : "L"} ${pt.x},${pt.y}`, "");
+  }, [dayPoints]);
+
+  const areaPath = useMemo(() => {
+    if (dayPoints.length === 0) return "";
+    const firstX = dayPoints[0].x;
+    const lastX = dayPoints[dayPoints.length - 1].x;
+    const bottomY = svgHeight - paddingY;
+    return `${linePath} L ${lastX},${bottomY} L ${firstX},${bottomY} Z`;
+  }, [linePath, dayPoints, svgHeight, paddingY]);
+
   // --------------------------------------------------------------------------
   // 2. MONTH-WISE REVENUE DATA FOR SELECTED YEAR (YEARLY GRAPH)
   // --------------------------------------------------------------------------
@@ -106,9 +136,8 @@ export default function AdminRevenueCharts({ rawBookings = [] }) {
 
     const maxMonthRevenue = Math.max(...months.map((m) => m.total), 10000);
     const yearlyTotalRevenue = months.reduce((sum, m) => sum + m.total, 0);
-    const yearlyTotalCount = months.reduce((sum, m) => sum + m.count, 0);
 
-    return { months, maxMonthRevenue, yearlyTotalRevenue, yearlyTotalCount };
+    return { months, maxMonthRevenue, yearlyTotalRevenue };
   }, [bookings, selectedYear]);
 
   // Selected Month Summary stats
@@ -127,20 +156,21 @@ export default function AdminRevenueCharts({ rawBookings = [] }) {
 
   return (
     <div className="space-y-10 mb-10">
+      
       {/* ---------------------------------------------------------------------- */}
-      {/* SECTION 1: MONTHLY REVENUE ANALYSIS & DAY-WISE BAR GRAPH (SIDE BY SIDE) */}
+      {/* SECTION 1: MONTHLY BLUE LINING GRAPH                                   */}
       {/* ---------------------------------------------------------------------- */}
       <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-200 dark:border-gray-800 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
           <div>
-            <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 text-xs font-bold uppercase tracking-wider">
-              Day-Wise Breakup Graph (1 to 30)
+            <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 text-xs font-bold uppercase tracking-wider">
+              System Blue Lining Graph
             </span>
             <h2 className="text-xl font-black text-gray-900 dark:text-white mt-1">
-              🗓️ Daily Revenue Breakdown ({selectedMonthLabel})
+              📈 Daily Revenue Trend ({selectedMonthLabel})
             </h2>
             <p className="text-xs text-gray-500">
-              Clear day-by-day earnings graph with gridlines and tooltips across all 30 days.
+              Blue lining graph tracking daily earnings performance across all franchise locations.
             </p>
           </div>
 
@@ -148,7 +178,10 @@ export default function AdminRevenueCharts({ rawBookings = [] }) {
           <div className="flex items-center gap-2 flex-wrap">
             <select
               value={selectedMonthIndex}
-              onChange={(e) => setSelectedMonthIndex(Number(e.target.value))}
+              onChange={(e) => {
+                setSelectedMonthIndex(Number(e.target.value));
+                setActiveDayPoint(null);
+              }}
               className="px-3.5 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-xs font-bold text-gray-900 dark:text-white"
             >
               {availableMonthsInYear.map((m) => (
@@ -160,7 +193,10 @@ export default function AdminRevenueCharts({ rawBookings = [] }) {
 
             <select
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              onChange={(e) => {
+                setSelectedYear(Number(e.target.value));
+                setActiveDayPoint(null);
+              }}
               className="px-3.5 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-xs font-bold text-gray-900 dark:text-white"
             >
               {availableYears.map((yr) => (
@@ -172,26 +208,27 @@ export default function AdminRevenueCharts({ rawBookings = [] }) {
           </div>
         </div>
 
-        {/* Side-by-Side Layout: Summary Card (Left) & Day-Wise Bar Chart (Right) */}
+        {/* Side-by-Side Layout: Summary Card (Left) & Blue Lining Chart (Right) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
           {/* Left Column: Month Breakdown Cards */}
           <div className="lg:col-span-4 space-y-4 flex flex-col justify-between">
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-rose-600 to-amber-600 text-white shadow-md">
-              <div className="text-xs font-bold uppercase tracking-wider text-rose-100">
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md">
+              <div className="text-xs font-bold uppercase tracking-wider text-blue-100">
                 {selectedMonthLabel} Total Revenue
               </div>
               <div className="text-3xl font-black mt-1">
                 ₹{selectedMonthSummary.total.toLocaleString()}
               </div>
-              <div className="text-xs text-rose-100 mt-2 font-medium">
-                {selectedMonthSummary.count} Total Confirmed Bookings
+              <div className="text-xs text-blue-100 mt-2 font-medium">
+                {selectedMonthSummary.count} Total Confirmed System Bookings
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                 <div className="text-[11px] font-bold text-gray-400 uppercase">Online Booking</div>
-                <div className="text-lg font-black text-rose-600 mt-0.5">
+                <div className="text-lg font-black text-blue-600 mt-0.5">
                   ₹{selectedMonthSummary.online.toLocaleString()}
                 </div>
               </div>
@@ -204,90 +241,89 @@ export default function AdminRevenueCharts({ rawBookings = [] }) {
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-900 dark:text-rose-200 font-medium">
-              📊 <span className="font-bold">Gridlines:</span> View daily revenue columns scaled from ₹0 to ₹{dayWiseData.maxDayRevenue.toLocaleString()}.
-            </div>
+            {activeDayPoint && (
+              <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-xs text-blue-900 dark:text-blue-200">
+                <span className="font-bold">📍 Day {activeDayPoint.dayNum} Details:</span>
+                <div className="text-base font-black text-blue-600 mt-0.5">₹{activeDayPoint.total.toLocaleString()}</div>
+                <div className="text-[11px] text-blue-700 dark:text-blue-300 mt-1">
+                  Online: ₹{activeDayPoint.online.toLocaleString()} | Offline: ₹{activeDayPoint.offline.toLocaleString()}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Right Column: Day-Wise Vertical Bar Chart with Gridlines ("Lining") */}
-          <div className="lg:col-span-8 bg-gray-50 dark:bg-gray-800/80 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 relative">
+          {/* Right Column: Blue Lining Chart */}
+          <div className="lg:col-span-8 bg-gray-50 dark:bg-gray-800/80 p-5 rounded-2xl border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between text-xs font-bold text-gray-600 dark:text-gray-300 mb-4">
-              <span>Daily Revenue Columns (Day 1 to Day {dayWiseData.days.length})</span>
-              <span className="text-rose-600 font-extrabold">Max Day Peak: ₹{dayWiseData.maxDayRevenue.toLocaleString()}</span>
+              <span>Daily Revenue Blue Lining Path (Days 1 to {dayWiseData.days.length})</span>
+              <span className="text-blue-600 font-black">Month Total: ₹{selectedMonthSummary.total.toLocaleString()}</span>
             </div>
 
-            {/* Grid Chart Box */}
-            <div className="relative h-64 w-full bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
-              
-              {/* Horizontal Background Grid Lines ("Lining") */}
-              <div className="absolute inset-x-3 inset-y-3 flex flex-col justify-between pointer-events-none z-0">
-                {[100, 75, 50, 25, 0].map((pct) => (
-                  <div key={pct} className="w-full flex items-center gap-2">
-                    <span className="text-[9px] font-mono text-gray-400 w-10 text-right shrink-0">
-                      ₹{Math.round((dayWiseData.maxDayRevenue * pct) / 100).toLocaleString()}
-                    </span>
-                    <div className="w-full border-b border-gray-100 dark:border-gray-800/80 border-dashed"></div>
-                  </div>
-                ))}
-              </div>
+            {/* Blue Lining Chart Box */}
+            <div className="relative w-full bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto overflow-visible">
+                <defs>
+                  <linearGradient id="adminBlueGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
 
-              {/* Bars Container */}
-              <div className="relative z-10 h-full pl-12 flex items-end justify-between gap-1 overflow-x-auto scrollbar-none">
-                {dayWiseData.days.map((d) => {
-                  const heightPct = Math.max(
-                    (d.total / dayWiseData.maxDayRevenue) * 100,
-                    d.total > 0 ? 8 : 2
-                  );
+                {/* Area Fill */}
+                {areaPath && <path d={areaPath} fill="url(#adminBlueGrad)" />}
 
+                {/* Blue Line */}
+                {linePath && (
+                  <path
+                    d={linePath}
+                    fill="none"
+                    stroke="#2563eb"
+                    strokeWidth="3.5"
+                    strokeLinecap="square"
+                    strokeLinejoin="miter"
+                  />
+                )}
+
+                {/* Interactive Points */}
+                {dayPoints.map((pt) => {
+                  const isActive = activeDayPoint?.dayNum === pt.dayNum;
                   return (
-                    <div
-                      key={d.dayNum}
-                      className="flex-1 min-w-[12px] h-full flex flex-col justify-end items-center group relative cursor-pointer"
+                    <g
+                      key={pt.dayNum}
+                      className="cursor-pointer group"
+                      onMouseEnter={() => setActiveDayPoint(pt)}
+                      onClick={() => setActiveDayPoint(pt)}
                     >
-                      {/* Hover Tooltip */}
-                      <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-30 pointer-events-none">
-                        <div className="bg-gray-900 text-white text-[10px] font-mono py-1.5 px-2.5 rounded-lg shadow-2xl whitespace-nowrap text-center border border-gray-700">
-                          <div className="font-bold text-rose-400">Day {d.dayNum} ({selectedMonthLabel.slice(0, 3)})</div>
-                          <div className="text-xs font-black text-emerald-400">Total: ₹{d.total.toLocaleString()}</div>
-                          <div className="text-[9px] text-gray-300 mt-0.5">
-                            Online: ₹{d.online.toLocaleString()} | Off: ₹{d.offline.toLocaleString()}
-                          </div>
-                        </div>
-                        <div className="w-2 h-2 bg-gray-900 rotate-45 -mt-1"></div>
-                      </div>
-
-                      {/* Bar Column Guide Line */}
-                      <div className="w-full h-full flex items-end justify-center bg-gray-50/50 dark:bg-gray-800/30 rounded-t-xs hover:bg-rose-50/40 transition-colors">
-                        <div
-                          style={{ height: `${heightPct}%` }}
-                          className={`w-full max-w-[16px] rounded-t-xs transition-all duration-300 ${
-                            d.total > 0
-                              ? "bg-gradient-to-t from-rose-600 via-amber-500 to-amber-400 group-hover:brightness-110 shadow-xs"
-                              : "bg-gray-200 dark:bg-gray-700/60"
+                      <circle cx={pt.x} cy={pt.y} r="14" fill="transparent" />
+                      {(isActive || pt.total > 0) && (
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={isActive ? "6" : "3.5"}
+                          className={`transition-all duration-200 ${
+                            isActive
+                              ? "fill-blue-600 stroke-white stroke-2 ring-4 ring-blue-400/50"
+                              : "fill-blue-500 opacity-80"
                           }`}
-                        ></div>
-                      </div>
-
-                      {/* Day Number Label below bar */}
-                      <span className="text-[8px] sm:text-[9px] font-mono font-bold text-gray-500 dark:text-gray-400 mt-1">
-                        {d.dayNum}
-                      </span>
-                    </div>
+                        />
+                      )}
+                    </g>
                   );
                 })}
-              </div>
+              </svg>
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-gray-500 mt-3 px-1">
               <span>📍 Days 1 to {dayWiseData.days.length}</span>
-              <span>💡 Hover over any day column to view exact daily earnings</span>
+              <span className="text-blue-600 font-bold">🟦 Blue Angled Trend Line (Hover or click points to view earnings)</span>
             </div>
           </div>
+
         </div>
       </div>
 
       {/* ---------------------------------------------------------------------- */}
-      {/* SECTION 2: YEARLY REVENUE COMPARISON (TALL MONTH-WISE BAR GRAPH)       */}
+      {/* SECTION 2: YEARLY REVENUE COMPARISON BAR GRAPH                          */}
       {/* ---------------------------------------------------------------------- */}
       <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-200 dark:border-gray-800 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
@@ -325,25 +361,10 @@ export default function AdminRevenueCharts({ rawBookings = [] }) {
           </div>
         </div>
 
-        {/* Tall 12 Month Bar Graph Box with Y-Axis Gridlines */}
+        {/* 12 Month Bar Graph Box */}
         <div className="bg-gray-50 dark:bg-gray-800/80 p-6 rounded-2xl border border-gray-200 dark:border-gray-700">
-          
-          <div className="relative h-80 w-full bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
-            
-            {/* Horizontal Gridlines for Height Comparison */}
-            <div className="absolute inset-x-4 inset-y-4 flex flex-col justify-between pointer-events-none z-0">
-              {[100, 75, 50, 25, 0].map((pct) => (
-                <div key={pct} className="w-full flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-gray-400 w-12 text-right shrink-0 font-bold">
-                    ₹{Math.round((yearlyMonthData.maxMonthRevenue * pct) / 100).toLocaleString()}
-                  </span>
-                  <div className="w-full border-b border-gray-100 dark:border-gray-800 border-dashed"></div>
-                </div>
-              ))}
-            </div>
-
-            {/* 12 Month Bars Container */}
-            <div className="relative z-10 h-full pl-14 flex items-end justify-between gap-3 sm:gap-5">
+          <div className="relative h-64 w-full bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="relative z-10 h-full pl-6 flex items-end justify-between gap-3 sm:gap-5">
               {yearlyMonthData.months.map((m) => {
                 const heightPct = Math.max(
                   (m.total / yearlyMonthData.maxMonthRevenue) * 100,
@@ -364,43 +385,23 @@ export default function AdminRevenueCharts({ rawBookings = [] }) {
                       </span>
                     )}
 
-                    {/* Hover Tooltip */}
-                    <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-30 pointer-events-none">
-                      <div className="bg-gray-900 text-white text-xs font-mono py-2.5 px-3.5 rounded-xl shadow-2xl whitespace-nowrap text-center border border-gray-700">
-                        <div className="font-black text-amber-400">{m.name} {selectedYear}</div>
-                        <div className="text-base font-black text-emerald-400 mt-0.5">
-                          Total: ₹{m.total.toLocaleString()}
-                        </div>
-                        <div className="text-[11px] text-gray-300 mt-1 border-t border-gray-800 pt-1">
-                          Online: ₹{m.online.toLocaleString()}
-                          <br />
-                          Offline: ₹{m.offline.toLocaleString()}
-                          <br />
-                          Bookings Count: {m.count}
-                        </div>
-                      </div>
-                      <div className="w-2.5 h-2.5 bg-gray-900 rotate-45 -mt-1"></div>
-                    </div>
-
-                    {/* Bar Column Guide & Height Scaled Bar */}
                     <div className="w-full h-full flex items-end justify-center bg-gray-50/50 dark:bg-gray-800/20 rounded-t-xl hover:bg-rose-50/40 transition-colors p-1">
                       <div
                         style={{ height: `${heightPct}%` }}
-                        className={`w-full max-w-[48px] rounded-t-xl transition-all duration-500 ${
+                        className={`w-full max-w-[48px] rounded-t-xl transition-all duration-300 ${
                           isSelectedMonth
-                            ? "bg-gradient-to-t from-rose-600 via-amber-500 to-amber-400 ring-2 ring-rose-500 shadow-lg scale-105"
+                            ? "bg-gradient-to-t from-purple-600 via-rose-500 to-amber-500 shadow-md ring-2 ring-purple-500"
                             : m.total > 0
-                            ? "bg-gradient-to-t from-emerald-600 via-emerald-500 to-teal-400 hover:from-rose-500 hover:to-amber-500 shadow-sm"
+                            ? "bg-gradient-to-t from-emerald-600 to-teal-400 hover:from-purple-500 hover:to-rose-500 shadow-xs"
                             : "bg-gray-200 dark:bg-gray-700/60"
                         }`}
-                      ></div>
+                      />
                     </div>
 
-                    {/* Month Label */}
                     <span
-                      className={`text-xs font-bold mt-2 transition-colors ${
+                      className={`text-xs font-bold mt-2 ${
                         isSelectedMonth
-                          ? "text-rose-600 dark:text-rose-400 font-black underline"
+                          ? "text-purple-600 dark:text-purple-400 font-black underline"
                           : "text-gray-700 dark:text-gray-300"
                       }`}
                     >
@@ -409,18 +410,6 @@ export default function AdminRevenueCharts({ rawBookings = [] }) {
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center justify-between text-xs text-gray-500 px-1">
-            <span>💡 Click on any month bar above to immediately inspect its daily breakdown in the graph above!</span>
-            <div className="flex items-center gap-4 font-semibold">
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow-xs"></span> Month Earnings
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-rose-500 inline-block shadow-xs"></span> Selected Month
-              </span>
             </div>
           </div>
         </div>

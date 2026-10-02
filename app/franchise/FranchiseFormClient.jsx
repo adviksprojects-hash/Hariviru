@@ -75,12 +75,11 @@ export default function FranchiseFormClient() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Email Address *</label>
+          <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Email Address (Optional)</label>
           <input
             type="email"
             name="email"
-            required
-            placeholder="vikram@example.com"
+            placeholder="vikram@example.com (optional)"
             className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
           />
         </div>
@@ -104,9 +103,8 @@ export default function FranchiseFormClient() {
           required
           className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-rose-500 focus:outline-hidden"
         >
-          <option value="₹15 Lakhs - ₹25 Lakhs">₹15 Lakhs - ₹25 Lakhs</option>
-          <option value="₹25 Lakhs - ₹40 Lakhs">₹25 Lakhs - ₹40 Lakhs</option>
-          <option value="₹40 Lakhs+">₹40 Lakhs+</option>
+          <option value="Less than 10 Lakhs">Less than 10 Lakhs</option>
+          <option value="More than 10 Lakhs">More than 10 Lakhs</option>
         </select>
       </div>
 

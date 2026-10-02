@@ -117,33 +117,6 @@ export default async function AdminDashboardPage() {
               Global overview across all franchises, managers, and revenue.
             </p>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin/branches"
-              className="px-5 py-2.5 rounded-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-xs shadow-md"
-            >
-              🏢 Manage Franchises
-            </Link>
-            <Link
-              href="/admin/managers"
-              className="px-5 py-2.5 rounded-full bg-rose-600 text-white font-bold text-xs shadow-md"
-            >
-              👥 Manage Managers
-            </Link>
-            <Link
-              href="/admin/settings"
-              className="px-5 py-2.5 rounded-full bg-purple-600 text-white font-bold text-xs shadow-md"
-            >
-              ⚙️ Package Settings
-            </Link>
-            <Link
-              href="/admin/franchise-inquiries"
-              className="px-5 py-2.5 rounded-full bg-amber-600 text-white font-bold text-xs shadow-md"
-            >
-              📩 Franchise Leads ({pendingInquiries})
-            </Link>
-          </div>
         </div>
 
         {/* System Stats Grid */}
