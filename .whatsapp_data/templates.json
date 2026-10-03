@@ -1,0 +1,47 @@
+[
+  {
+    "id": "tpl-diwali",
+    "title": "🪔 Happy Diwali Festive Special Offer!",
+    "category": "FESTIVAL",
+    "message": "Celebrate this Diwali at HaruViru Celebration House! Get flat 20% OFF on premium private party slots with custom cake & photo booth setup included.",
+    "couponCode": "DIWALI20",
+    "callToActionUrl": "https://haruviru.com/branches",
+    "createdAt": "2026-10-03T10:32:11.030Z"
+  },
+  {
+    "id": "tpl-holi",
+    "title": "🎨 Happy Holi Color Celebration Deal!",
+    "message": "Bring vivid colors to your special moments! Reserve your private celebration hall for Holi parties with exclusive discounts & complimentary balloons.",
+    "category": "FESTIVAL",
+    "couponCode": "HOLI2026",
+    "callToActionUrl": "https://haruviru.com/branches",
+    "createdAt": "2026-10-03T10:32:11.030Z"
+  },
+  {
+    "id": "tpl-newyear",
+    "title": "🎆 New Year Party Paradise Offer!",
+    "category": "FESTIVAL",
+    "message": "Ring in the New Year with your closest crew in your private celebration theater & hall! Special evening and night slots open now.",
+    "couponCode": "NEWYEAR26",
+    "callToActionUrl": "https://haruviru.com/branches",
+    "createdAt": "2026-10-03T10:32:11.030Z"
+  },
+  {
+    "id": "tpl-birthday",
+    "title": "🎂 Birthday Special Surprise Package!",
+    "category": "OFFER",
+    "message": "Is a birthday coming up? Book HaruViru Celebration House and receive free LED name lights + customized birthday cake setup!",
+    "couponCode": "BIRTHDAY10",
+    "callToActionUrl": "https://haruviru.com/branches",
+    "createdAt": "2026-10-03T10:32:11.030Z"
+  },
+  {
+    "id": "tpl-weekend",
+    "title": "🌟 Weekend Special Romantic Date Night",
+    "category": "OFFER",
+    "message": "Plan a romantic mini-theater movie date or anniversary surprise this weekend! Flat 15% discount for early slot bookings.",
+    "couponCode": "WEEKEND15",
+    "callToActionUrl": "https://haruviru.com/branches",
+    "createdAt": "2026-10-03T10:32:11.030Z"
+  }
+]

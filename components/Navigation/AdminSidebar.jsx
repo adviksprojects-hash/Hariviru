@@ -31,6 +31,11 @@ export default function AdminSidebar() {
       icon: "⚙️",
     },
     {
+      name: "WhatsApp Marketing",
+      href: "/admin/whatsapp-marketing",
+      icon: "📢",
+    },
+    {
       name: "Franchise Leads",
       href: "/admin/franchise-inquiries",
       icon: "📩",
