@@ -15,7 +15,10 @@ export async function GET(req) {
   if (mode && token) {
     if (mode === "subscribe" && token === VERIFY_TOKEN) {
       console.log("✅ [WhatsApp Webhook Verified Successfully]");
-      return new Response(challenge, { status: 200 });
+      return new Response(challenge, {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      });
     } else {
       return new Response("Forbidden: Invalid verification token", { status: 403 });
     }
@@ -35,7 +38,7 @@ export async function POST(req) {
     if (body.simulateReply) {
       const { phone, customerName, message } = body;
       if (phone && message) {
-        const saved = saveWhatsAppMessage({
+        const saved = await saveWhatsAppMessage({
           phone,
           sender: "CUSTOMER",
           senderName: customerName || "Customer",
@@ -75,7 +78,7 @@ export async function POST(req) {
 
                 console.log(`📩 [WhatsApp Webhook Received Reply] From: ${contactName} (+${fromPhone}): "${textContent}"`);
 
-                saveWhatsAppMessage({
+                await saveWhatsAppMessage({
                   phone: fromPhone,
                   sender: "CUSTOMER",
                   senderName: contactName,

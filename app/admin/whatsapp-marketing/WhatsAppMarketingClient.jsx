@@ -78,16 +78,34 @@ export default function WhatsAppMarketingClient({
     }
   }, [selectedCustomer]);
 
+  // Real-time polling every 3 seconds for live incoming messages & chat updates
+  useEffect(() => {
+    if (activeTab !== "inbox") return;
+
+    const interval = setInterval(() => {
+      if (selectedCustomer?.cleanPhone) {
+        fetchChatData(selectedCustomer.cleanPhone);
+      } else {
+        fetchChatData(null);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [selectedCustomer, activeTab]);
+
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const fetchChatData = async (phone) => {
     try {
-      const res = await getWhatsAppChatInboxData(phone);
+      const targetPhone = phone || selectedCustomer?.cleanPhone;
+      const res = await getWhatsAppChatInboxData(targetPhone);
       if (res.success) {
         setConversations(res.conversations || []);
-        setMessages(res.currentMessages || []);
+        if (targetPhone) {
+          setMessages(res.currentMessages || []);
+        }
         if (res.templates) setTemplates(res.templates);
       }
     } catch (err) {
@@ -110,6 +128,8 @@ export default function WhatsAppMarketingClient({
         setMessages(res.messages || []);
         setConversations(res.conversations || []);
         setReplyText("");
+        // Instantly re-sync chat history
+        fetchChatData(selectedCustomer.cleanPhone);
       }
     } catch (err) {
       alert("Error sending reply: " + err.message);
@@ -252,6 +272,53 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
 
 ✨ Celebrate Special Moments in Your Private Paradise! ✨`;
 
+  // Combine initial customers with active conversations for real-time inbox list
+  const contactsMap = new Map();
+
+  for (const c of initialCustomers) {
+    const ten = c.cleanPhone.replace(/[^0-9]/g, "").slice(-10);
+    contactsMap.set(ten, {
+      name: c.name,
+      phone: c.phone,
+      cleanPhone: c.cleanPhone,
+      branchName: c.branchName,
+      branchId: c.branchId,
+      lastMessage: null,
+      lastSender: null,
+      lastTimestamp: null,
+    });
+  }
+
+  for (const conv of conversations) {
+    const ten = conv.phone.replace(/[^0-9]/g, "").slice(-10);
+    const existing = contactsMap.get(ten);
+    if (existing) {
+      existing.lastMessage = conv.lastMessage;
+      existing.lastSender = conv.lastSender;
+      existing.lastTimestamp = conv.lastTimestamp;
+    } else {
+      contactsMap.set(ten, {
+        name: `Customer (+${conv.cleanPhone})`,
+        phone: conv.phone,
+        cleanPhone: conv.cleanPhone,
+        branchName: "WhatsApp Contact",
+        branchId: "unknown",
+        lastMessage: conv.lastMessage,
+        lastSender: conv.lastSender,
+        lastTimestamp: conv.lastTimestamp,
+      });
+    }
+  }
+
+  const sortedContacts = Array.from(contactsMap.values()).sort((a, b) => {
+    if (a.lastTimestamp && b.lastTimestamp) {
+      return new Date(b.lastTimestamp) - new Date(a.lastTimestamp);
+    }
+    if (a.lastTimestamp) return -1;
+    if (b.lastTimestamp) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <div className="space-y-6">
       {/* Top Header Navigation Tabs */}
@@ -340,21 +407,19 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
 
             {/* Customer Contact Cards */}
             <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800 max-h-[560px]">
-              {initialCustomers
+              {sortedContacts
                 .filter((c) => {
                   if (!inboxSearch) return true;
                   const q = inboxSearch.toLowerCase();
                   return (
                     c.name.toLowerCase().includes(q) ||
                     c.phone.includes(q) ||
-                    c.branchName.toLowerCase().includes(q)
+                    c.branchName.toLowerCase().includes(q) ||
+                    (c.lastMessage && c.lastMessage.toLowerCase().includes(q))
                   );
                 })
                 .map((c, idx) => {
-                  const isSelected = selectedCustomer?.cleanPhone === c.cleanPhone;
-                  const conv = conversations.find(
-                    (item) => item.phone.slice(-10) === c.cleanPhone.slice(-10)
-                  );
+                  const isSelected = selectedCustomer?.cleanPhone.slice(-10) === c.cleanPhone.slice(-10);
 
                   return (
                     <button
@@ -380,15 +445,15 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
                           <p className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold truncate">
                             +{c.cleanPhone}
                           </p>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                            {conv?.lastMessage || `Branch: ${c.branchName}`}
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5 font-medium">
+                            {c.lastMessage || `Branch: ${c.branchName}`}
                           </p>
                         </div>
                       </div>
 
-                      {conv?.lastTimestamp && (
-                        <span className="text-[9px] text-gray-400 shrink-0" suppressHydrationWarning>
-                          {formatTimeString(conv.lastTimestamp)}
+                      {c.lastTimestamp && (
+                        <span className="text-[9px] text-gray-400 shrink-0 font-semibold" suppressHydrationWarning>
+                          {formatTimeString(c.lastTimestamp)}
                         </span>
                       )}
                     </button>

@@ -53,8 +53,8 @@ export default async function WhatsAppMarketingPage() {
   }
 
   const initialCustomers = Array.from(customerMap.values());
-  const initialConversations = getAllWhatsAppConversations();
-  const initialTemplates = getAllWhatsAppTemplates();
+  const initialConversations = await getAllWhatsAppConversations();
+  const initialTemplates = await getAllWhatsAppTemplates();
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950 py-8 px-4">
