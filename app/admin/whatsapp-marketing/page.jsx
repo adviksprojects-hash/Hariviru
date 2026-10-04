@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireRole } from "@/lib/rbac";
 import { db } from "@/lib/prisma";
 import WhatsAppMarketingClient from "./WhatsAppMarketingClient";
@@ -57,18 +56,14 @@ export default async function WhatsAppMarketingPage() {
   const initialTemplates = await getAllWhatsAppTemplates();
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 py-8 px-4">
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 pt-2 pb-6 px-3 sm:px-6">
       <div className="container mx-auto max-w-7xl">
-        <Link href="/admin" className="text-xs font-semibold text-rose-600 hover:underline mb-4 inline-block">
-          ← Back to Admin Control
-        </Link>
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
               <span>📱</span> WhatsApp Marketing & Live Chat Inbox
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-xs text-gray-500">
               Manage two-way customer conversations, create custom festival templates, and broadcast marketing offers automatically.
             </p>
           </div>

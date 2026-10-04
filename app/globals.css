@@ -128,3 +128,24 @@
     @apply font-sans;
   }
 }
+
+/* WhatsApp Web Custom Scrollbar */
+.whatsapp-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.whatsapp-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.whatsapp-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+.dark .whatsapp-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+.whatsapp-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+.dark .whatsapp-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}

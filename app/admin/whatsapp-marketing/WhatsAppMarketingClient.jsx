@@ -33,9 +33,7 @@ export default function WhatsAppMarketingClient({
 
   // Conversations & Chat Inbox State
   const [conversations, setConversations] = useState(initialConversations || []);
-  const [selectedCustomer, setSelectedCustomer] = useState(
-    initialCustomers && initialCustomers.length > 0 ? initialCustomers[0] : null
-  );
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [messages, setMessages] = useState([]);
   const [replyText, setReplyText] = useState("");
   const [isReplying, setIsReplying] = useState(false);
@@ -71,6 +69,12 @@ export default function WhatsAppMarketingClient({
   const [error, setError] = useState(null);
   const [audienceSearch, setAudienceSearch] = useState("");
 
+  // Ref for selectedCustomer to avoid stale closure issues in interval polling
+  const selectedCustomerRef = useRef(selectedCustomer);
+  useEffect(() => {
+    selectedCustomerRef.current = selectedCustomer;
+  }, [selectedCustomer]);
+
   // Load chat messages when selected customer changes
   useEffect(() => {
     if (selectedCustomer) {
@@ -83,15 +87,12 @@ export default function WhatsAppMarketingClient({
     if (activeTab !== "inbox") return;
 
     const interval = setInterval(() => {
-      if (selectedCustomer?.cleanPhone) {
-        fetchChatData(selectedCustomer.cleanPhone);
-      } else {
-        fetchChatData(null);
-      }
+      const currentPhone = selectedCustomerRef.current?.cleanPhone || null;
+      fetchChatData(currentPhone);
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [selectedCustomer, activeTab]);
+  }, [activeTab]);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -99,11 +100,15 @@ export default function WhatsAppMarketingClient({
 
   const fetchChatData = async (phone) => {
     try {
-      const targetPhone = phone || selectedCustomer?.cleanPhone;
+      const targetPhone = phone !== undefined ? phone : selectedCustomerRef.current?.cleanPhone;
       const res = await getWhatsAppChatInboxData(targetPhone);
       if (res.success) {
         setConversations(res.conversations || []);
-        if (targetPhone) {
+        if (
+          targetPhone &&
+          selectedCustomerRef.current &&
+          targetPhone.slice(-10) === selectedCustomerRef.current.cleanPhone.slice(-10)
+        ) {
           setMessages(res.currentMessages || []);
         }
         if (res.templates) setTemplates(res.templates);
@@ -118,21 +123,34 @@ export default function WhatsAppMarketingClient({
     e.preventDefault();
     if (!replyText.trim() || !selectedCustomer) return;
 
+    const textToSend = replyText.trim();
+    setReplyText("");
+
+    // Optimistic UI push for instant message display in chat box
+    const optimisticMsg = {
+      id: `temp-${Date.now()}`,
+      phone: selectedCustomer.cleanPhone,
+      sender: "ADMIN",
+      senderName: "HaruViru Admin",
+      message: textToSend,
+      status: "SENT",
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+
     setIsReplying(true);
     try {
       const res = await sendWhatsAppAdminReplyAction(
         selectedCustomer.cleanPhone,
-        replyText
+        textToSend
       );
       if (res.success) {
         setMessages(res.messages || []);
         setConversations(res.conversations || []);
-        setReplyText("");
-        // Instantly re-sync chat history
-        fetchChatData(selectedCustomer.cleanPhone);
       }
     } catch (err) {
-      alert("Error sending reply: " + err.message);
+      console.error("Error sending reply:", err);
     } finally {
       setIsReplying(false);
     }
@@ -379,17 +397,22 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
       {/* TAB 1: LIVE WHATSAPP INBOX & TWO-WAY MESSENGER */}
       {/* ========================================================================= */}
       {activeTab === "inbox" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl overflow-hidden min-h-[680px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl overflow-hidden h-[calc(100vh-170px)] min-h-[550px] max-h-[820px]">
           {/* Left Column: Customer Conversations List (5 cols) */}
-          <div className="lg:col-span-4 border-r border-gray-100 dark:border-gray-800 flex flex-col h-full bg-gray-50/50 dark:bg-gray-950/50">
-            <div className="p-4 border-b border-gray-100 dark:border-gray-800 space-y-3">
+          <div className={`lg:col-span-4 border-r border-gray-200 dark:border-gray-800 flex flex-col h-full min-h-0 bg-gray-50/50 dark:bg-gray-950/50 ${selectedCustomer ? "hidden lg:flex" : "flex"}`}>
+            <div className="p-3.5 border-b border-gray-200 dark:border-gray-800 space-y-2.5 shrink-0">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">
-                  Customer Chats
+                <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                  Chats ({sortedContacts.length})
                 </h3>
                 <button
                   type="button"
-                  onClick={() => setSimulateModalOpen(true)}
+                  onClick={() => {
+                    if (!selectedCustomer && sortedContacts.length > 0) {
+                      setSelectedCustomer(sortedContacts[0]);
+                    }
+                    setSimulateModalOpen(true);
+                  }}
                   className="px-2.5 py-1 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 text-[10px] font-bold hover:bg-purple-200 transition-colors"
                 >
                   ⚡ Simulate Reply
@@ -398,7 +421,7 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
 
               <input
                 type="text"
-                placeholder="Search phone or customer name..."
+                placeholder="Search by phone, customer, message..."
                 value={inboxSearch}
                 onChange={(e) => setInboxSearch(e.target.value)}
                 className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
@@ -406,7 +429,7 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
             </div>
 
             {/* Customer Contact Cards */}
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800 max-h-[560px]">
+            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800/60 whatsapp-scrollbar pr-1">
               {sortedContacts
                 .filter((c) => {
                   if (!inboxSearch) return true;
@@ -426,9 +449,9 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
                       key={idx}
                       type="button"
                       onClick={() => setSelectedCustomer(c)}
-                      className={`w-full text-left p-4 transition-all flex items-start justify-between gap-3 ${
+                      className={`w-full text-left p-3.5 transition-all flex items-start justify-between gap-3 ${
                         isSelected
-                          ? "bg-emerald-50 dark:bg-emerald-950/40 border-l-4 border-emerald-600"
+                          ? "bg-emerald-50 dark:bg-emerald-950/50 border-l-4 border-emerald-600"
                           : "hover:bg-gray-100/70 dark:hover:bg-gray-800/60"
                       }`}
                     >
@@ -463,13 +486,20 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
           </div>
 
           {/* Right Column: Full Interactive WhatsApp Messenger Window (8 cols) */}
-          <div className="lg:col-span-8 flex flex-col h-full bg-[#efeae2] dark:bg-[#0b141a]">
+          <div className={`lg:col-span-8 flex flex-col h-full min-h-0 bg-[#efeae2] dark:bg-[#0b141a] relative ${!selectedCustomer ? "hidden lg:flex" : "flex"}`}>
             {selectedCustomer ? (
               <>
                 {/* Chat Top Bar */}
-                <div className="p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                <div className="p-3.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shadow-xs shrink-0">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold text-sm flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCustomer(null)}
+                      className="lg:hidden px-2.5 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-200"
+                    >
+                      ← Back
+                    </button>
+                    <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shrink-0">
                       {selectedCustomer.name.charAt(0)}
                     </div>
                     <div>
@@ -492,10 +522,10 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
                   </a>
                 </div>
 
-                {/* Messages Container */}
-                <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 max-h-[480px]">
+                {/* Messages Stream Container */}
+                <div className="flex-1 min-h-0 p-4 overflow-y-auto space-y-3 whatsapp-scrollbar">
                   {messages.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-gray-500 bg-white/80 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 max-w-md mx-auto my-8">
+                    <div className="p-6 text-center text-xs text-gray-500 bg-white/80 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 max-w-md mx-auto my-8 shadow-xs">
                       💬 No previous messages recorded for <strong>+{selectedCustomer.cleanPhone}</strong>.
                       Type a message below to start chatting directly via Meta WhatsApp API or launch WhatsApp Web!
                     </div>
@@ -524,7 +554,7 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
                               <span suppressHydrationWarning>
                                 {formatTimeString(m.timestamp)}
                               </span>
-                              {isAdmin && <span>✓✓</span>}
+                              {isAdmin && <span className="text-emerald-700 dark:text-emerald-300 font-bold">✓✓</span>}
                             </div>
                           </div>
                         </div>
@@ -537,7 +567,7 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
                 {/* Direct Reply Bar */}
                 <form
                   onSubmit={handleSendAdminReply}
-                  className="p-3 sm:p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex items-center gap-3"
+                  className="p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex items-center gap-3 shrink-0"
                 >
                   <input
                     type="text"
@@ -564,8 +594,19 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
                 </form>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center p-8 text-center text-gray-400">
-                Select a customer contact from the left list to view WhatsApp conversation.
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#f0f2f5] dark:bg-[#111b21] border-b-8 border-emerald-500">
+                <div className="w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-950/80 flex items-center justify-center text-3xl mb-4 shadow-inner">
+                  💬
+                </div>
+                <h3 className="text-xl font-black text-gray-800 dark:text-white tracking-tight mb-2">
+                  HaruViru WhatsApp Web for Admin
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed mb-6">
+                  Select a customer conversation from the chat list on the left to view message history and send direct WhatsApp messages.
+                </p>
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                  <span>🔒 End-to-end encrypted Cloud API</span>
+                </div>
               </div>
             )}
           </div>
@@ -953,9 +994,20 @@ ${couponCode ? `🎟️ *Special Coupon Code:* ${couponCode}\n\n` : ""}👉 *Boo
               <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
                 Target Customer
               </label>
-              <div className="text-xs font-bold text-gray-900 dark:text-white">
-                {selectedCustomer?.name} (+{selectedCustomer?.cleanPhone})
-              </div>
+              <select
+                value={selectedCustomer?.cleanPhone || (sortedContacts[0]?.cleanPhone || "")}
+                onChange={(e) => {
+                  const target = sortedContacts.find((c) => c.cleanPhone === e.target.value);
+                  if (target) setSelectedCustomer(target);
+                }}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-900 dark:text-white"
+              >
+                {sortedContacts.map((c, idx) => (
+                  <option key={idx} value={c.cleanPhone}>
+                    {c.name} (+{c.cleanPhone})
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
