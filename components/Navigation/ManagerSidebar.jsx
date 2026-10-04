@@ -37,6 +37,12 @@ export default function ManagerSidebar() {
       icon: "⏰",
     },
     {
+      name: "Marketing & Target",
+      subtitle: "Anniversary & Reminders",
+      href: "/manager/marketing",
+      icon: "📢",
+    },
+    {
       name: "Settings",
       subtitle: "Halls & Packages",
       href: "/manager/settings",
