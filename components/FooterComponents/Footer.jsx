@@ -113,9 +113,16 @@ export default function Footer() {
 
         </div>
 
-        {/* Bottom Copyright */}
+        {/* Bottom Copyright & Legal Links */}
         <div className="pt-8 border-t border-gray-900 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-4">
-          <p>© {new Date().getFullYear()} HaruViru Celebration House. All rights reserved.</p>
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+            <p>© {new Date().getFullYear()} HaruViru Celebration House. All rights reserved.</p>
+            <div className="flex items-center gap-3 text-gray-400">
+              <Link href="/privacy-policy" className="hover:text-rose-400 transition-colors">Privacy Policy</Link>
+              <span>•</span>
+              <Link href="/terms" className="hover:text-rose-400 transition-colors">Terms of Service</Link>
+            </div>
+          </div>
           <p className="flex items-center gap-1.5 flex-wrap justify-center sm:justify-end">
             <span>Crafted with ❤️ for All Franchise Branches</span>
             <span>•</span>

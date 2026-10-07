@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   sendWhatsAppAdminReplyAction,
+  sendWhatsAppReminderTemplateAction,
   saveCustomFestivalTemplateAction,
   deleteCustomFestivalTemplateAction,
 } from "@/lib/actions";
@@ -134,7 +135,7 @@ export default function ManagerMarketingClient({
     setNewMessage((prev) => prev + ` ${varTag} `);
   };
 
-  // Send Direct WhatsApp Message via Cloud API / Local Store
+  // Send Direct WhatsApp Message via Meta Cloud API Template / Local Store
   const handleSendWhatsAppMessage = async (e) => {
     e.preventDefault();
     if (!selectedCustomer || !customMessage.trim()) return;
@@ -143,14 +144,20 @@ export default function ManagerMarketingClient({
     setSendSuccessAlert(null);
 
     try {
-      const res = await sendWhatsAppAdminReplyAction(
-        selectedCustomer.cleanPhone,
-        customMessage.trim()
-      );
+      const activeTpl = templates.find((t) => t.id === selectedTemplateId);
+      const res = await sendWhatsAppReminderTemplateAction({
+        toPhone: selectedCustomer.cleanPhone,
+        customerName: selectedCustomer.name,
+        eventDate: formatDateString(selectedCustomer.upcomingEventDate),
+        branchName: selectedCustomer.branchName,
+        couponCode: activeTpl?.couponCode || "SPECIAL2026",
+        category: selectedCustomer.category,
+        messageText: customMessage.trim(),
+      });
 
       if (res.success) {
         setSendSuccessAlert(
-          `✅ Message successfully recorded & sent to ${selectedCustomer.name} (+${selectedCustomer.cleanPhone})!`
+          `✅ Template message successfully sent to ${selectedCustomer.name} (+${selectedCustomer.cleanPhone}) via Meta WhatsApp API!`
         );
         setTimeout(() => {
           setMessageModalOpen(false);
