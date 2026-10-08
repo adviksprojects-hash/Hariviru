@@ -32,20 +32,21 @@ export default async function Header() {
                 {/* Navigation (Client-Side for Active States & Mobile Menu) */}
                 <HeaderClient user={user} />
 
-                {/* Clerk Authentication UI */}
+                {/* Direct Book Celebration Action & Authentication */}
                 <div className="flex items-center gap-3">
+                    <Link
+                        href="/branches"
+                        className="text-sm font-bold bg-linear-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white px-5 py-2.5 rounded-full transition-all shadow-md hover:shadow-rose-500/25 transform hover:-translate-y-0.5 inline-flex items-center"
+                    >
+                        Book Celebration
+                    </Link>
+
                     <Show when="signed-out">
                         <SignInButton mode="modal">
-                            <button className="hidden sm:block text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-rose-600 transition-colors">
+                            <button className="hidden sm:block text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-rose-600 transition-colors px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900">
                                 Sign in
                             </button>
                         </SignInButton>
-
-                        <SignUpButton mode="modal">
-                            <button className="text-sm font-semibold bg-linear-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white px-5 py-2.5 rounded-full transition-all shadow-md hover:shadow-rose-500/25 transform hover:-translate-y-0.5">
-                                Book Celebration
-                            </button>
-                        </SignUpButton>
                     </Show>
 
                     <Show when="signed-in">

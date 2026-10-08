@@ -21,7 +21,7 @@ export const metadata = {
 export default async function Home() {
   const branches = await db.branch.findMany({
     where: { isActive: true },
-    take: 6,
+    take: 3,
   });
 
   const { packages: globalPackages } = await getGlobalPackages();
@@ -101,13 +101,16 @@ export default async function Home() {
       {/* 3. Why Choose Us Section */}
       <WhyChooseUs />
 
-      {/* 4. Featured Branches Showcase using shared BranchCard */}
+      {/* 4. Featured Branches Showcase (Shows 3 Popular Branches with View All CTA) */}
       <section className="py-16 px-4 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800">
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
             <div>
-              <h2 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight">
-                Our Popular Celebration House Franchises
+              <span className="px-3.5 py-1 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 text-xs font-bold uppercase tracking-wider">
+                Franchise Directory
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight mt-2">
+                HaruViru Celebration House Branches
               </h2>
               <p className="mt-2 text-gray-600 dark:text-gray-400">
                 Choose from our luxury styled branches equipped with private screening and premium setups.
@@ -115,7 +118,7 @@ export default async function Home() {
             </div>
             <Link
               href="/branches"
-              className="mt-4 md:mt-0 font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1"
+              className="mt-4 md:mt-0 font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 text-sm bg-rose-50 dark:bg-rose-950/50 px-4 py-2 rounded-full border border-rose-200 dark:border-rose-900/50 transition-colors"
             >
               View All Branches →
             </Link>
@@ -125,6 +128,17 @@ export default async function Home() {
             {branches.map((branch) => (
               <BranchCard key={branch.id} branch={branch} />
             ))}
+          </div>
+
+          {/* Prominent Bottom View All Branches Button */}
+          <div className="mt-12 text-center">
+            <Link
+              href="/branches"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-linear-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white font-bold text-base shadow-lg shadow-rose-500/20 transform hover:-translate-y-0.5 transition-all"
+            >
+              <span>Explore All Celebration Branches ({branches.length}+ Locations)</span>
+              <span>→</span>
+            </Link>
           </div>
         </div>
       </section>

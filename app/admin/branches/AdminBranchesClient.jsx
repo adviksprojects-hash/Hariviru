@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createBranch, updateBranch, deleteBranch, toggleBranchStatus, assignManagerByEmail } from "@/lib/actions";
+import { createBranch, updateBranch, deleteBranch, toggleBranchStatus, assignManagerByEmail, unassignManagerFromBranch } from "@/lib/actions";
 
 const SYSTEM_SAMPLE_IMAGES = [
   "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80",
@@ -27,6 +27,8 @@ export default function AdminBranchesClient({ initialBranches }) {
   const [editingBranch, setEditingBranch] = useState(null);
   const [assigningBranchId, setAssigningBranchId] = useState(null);
   const [managerEmailInput, setManagerEmailInput] = useState("");
+  const [managerNameInput, setManagerNameInput] = useState("");
+  const [managerPhoneInput, setManagerPhoneInput] = useState("");
   const [customAmenityInput, setCustomAmenityInput] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -240,24 +242,57 @@ export default function AdminBranchesClient({ initialBranches }) {
 
   const handleAssignManagerByEmail = async (e) => {
     e.preventDefault();
-    if (!assigningBranchId || !managerEmailInput) return;
+    if (!assigningBranchId || !managerEmailInput.trim()) return;
     setLoading(true);
 
     try {
-      const res = await assignManagerByEmail(managerEmailInput, assigningBranchId);
+      const res = await assignManagerByEmail(managerEmailInput.trim(), assigningBranchId, {
+        name: managerNameInput.trim() || undefined,
+        phone: managerPhoneInput.trim() || undefined,
+      });
       if (res.success) {
         alert(`Successfully assigned manager role to ${managerEmailInput}!`);
+        const targetBranchId = assigningBranchId;
         setAssigningBranchId(null);
         setManagerEmailInput("");
-        setBranches(branches.map(b => b.id === assigningBranchId ? {
-          ...b,
-          managers: [{ name: res.user.name, email: res.user.email }]
-        } : b));
+        setManagerNameInput("");
+        setManagerPhoneInput("");
+        setBranches(branches.map(b => {
+          if (b.id !== targetBranchId) return b;
+          const currentManagers = b.managers || [];
+          const existingIdx = currentManagers.findIndex(m => m.id === res.user.id || m.email?.toLowerCase() === res.user.email?.toLowerCase());
+          let updatedList;
+          if (existingIdx >= 0) {
+            updatedList = [...currentManagers];
+            updatedList[existingIdx] = res.user;
+          } else {
+            updatedList = [...currentManagers, res.user];
+          }
+          return { ...b, managers: updatedList };
+        }));
       }
     } catch (err) {
       alert("Failed to assign manager: " + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUnassignManager = async (userId, branchId, managerIdentifier) => {
+    if (!confirm(`Are you sure you want to remove manager "${managerIdentifier}" from this branch?`)) return;
+    try {
+      const res = await unassignManagerFromBranch(userId);
+      if (res.success) {
+        setBranches(branches.map(b => {
+          if (b.id !== branchId) return b;
+          return {
+            ...b,
+            managers: (b.managers || []).filter(m => m.id !== userId)
+          };
+        }));
+      }
+    } catch (err) {
+      alert("Error removing manager: " + err.message);
     }
   };
 
@@ -575,16 +610,21 @@ export default function AdminBranchesClient({ initialBranches }) {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-800 relative">
             <button
-              onClick={() => setAssigningBranchId(null)}
+              onClick={() => {
+                setAssigningBranchId(null);
+                setManagerEmailInput("");
+                setManagerNameInput("");
+                setManagerPhoneInput("");
+              }}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold"
             >
               ✕
             </button>
             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-1">
-              Assign Manager by Email
+              Assign Branch Manager
             </h3>
             <p className="text-xs text-gray-500 mb-6">
-              Enter manager's email address to assign them to {branches.find(b => b.id === assigningBranchId)?.name}.
+              Assign a manager to <strong>{branches.find(b => b.id === assigningBranchId)?.name}</strong>. You can assign multiple managers to this branch.
             </p>
 
             <form onSubmit={handleAssignManagerByEmail} className="space-y-4">
@@ -593,9 +633,31 @@ export default function AdminBranchesClient({ initialBranches }) {
                 <input
                   type="email"
                   required
-                  placeholder="manager@haruviru.com"
+                  placeholder="manager@haruvirucelebrationhouse.in"
                   value={managerEmailInput}
                   onChange={(e) => setManagerEmailInput(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Manager Name (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Dhiraj Gaikwad"
+                  value={managerNameInput}
+                  onChange={(e) => setManagerNameInput(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Manager Phone / WhatsApp (Optional)</label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 9762486649"
+                  value={managerPhoneInput}
+                  onChange={(e) => setManagerPhoneInput(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-sm"
                 />
               </div>
@@ -603,7 +665,12 @@ export default function AdminBranchesClient({ initialBranches }) {
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setAssigningBranchId(null)}
+                  onClick={() => {
+                    setAssigningBranchId(null);
+                    setManagerEmailInput("");
+                    setManagerNameInput("");
+                    setManagerPhoneInput("");
+                  }}
                   className="px-4 py-2 rounded-xl border text-xs font-semibold"
                 >
                   Cancel
@@ -611,9 +678,9 @@ export default function AdminBranchesClient({ initialBranches }) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-6 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs"
+                  className="px-6 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-colors"
                 >
-                  {loading ? "Assigning..." : "Send Role Request"}
+                  {loading ? "Assigning..." : "Assign Manager"}
                 </button>
               </div>
             </form>
@@ -658,22 +725,55 @@ export default function AdminBranchesClient({ initialBranches }) {
                 ))}
               </div>
 
-              <div className="mt-4 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-gray-400 font-semibold block text-[10px]">ASSIGNED MANAGER:</span>
-                  <span className="font-bold text-gray-800 dark:text-gray-200">
-                    {b.managers?.[0]?.name || b.managers?.[0]?.email || "Unassigned"}
+              {/* Multi-Manager Assignment Section */}
+              <div className="mt-4 p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-500 dark:text-gray-400 font-bold text-[10px] uppercase tracking-wider">
+                    ASSIGNED MANAGERS ({b.managers?.length || 0})
                   </span>
+                  <button
+                    onClick={() => {
+                      setAssigningBranchId(b.id);
+                      setManagerEmailInput("");
+                      setManagerNameInput("");
+                      setManagerPhoneInput("");
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] transition-colors flex items-center gap-1 shadow-2xs"
+                  >
+                    + Add Manager
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    setAssigningBranchId(b.id);
-                    setManagerEmailInput(b.managers?.[0]?.email || "");
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold text-[11px]"
-                >
-                  ✉️ Assign Manager by Email
-                </button>
+
+                {b.managers && b.managers.length > 0 ? (
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    {b.managers.map((mgr) => (
+                      <div
+                        key={mgr.id || mgr.email}
+                        className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs"
+                      >
+                        <div className="flex flex-col min-w-0 pr-2">
+                          <span className="font-bold text-gray-900 dark:text-white truncate">
+                            👤 {mgr.name || "Branch Manager"}
+                          </span>
+                          <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                            ✉️ {mgr.email} {mgr.phone ? `• 📞 ${mgr.phone}` : ""}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleUnassignManager(mgr.id, b.id, mgr.name || mgr.email)}
+                          title="Remove manager from this branch"
+                          className="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950 text-rose-600 hover:bg-rose-100 font-bold text-[11px] shrink-0 transition-colors"
+                        >
+                          ✕ Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-gray-400 italic py-1">
+                    No managers assigned to this branch yet.
+                  </div>
+                )}
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600 dark:text-gray-400">

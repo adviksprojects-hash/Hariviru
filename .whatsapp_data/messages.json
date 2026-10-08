@@ -416,5 +416,38 @@
     "metaId": null,
     "waLink": null,
     "timestamp": "2026-10-06T08:57:14.615Z"
+  },
+  {
+    "id": "0b2d590e-2f49-4939-b717-d3417380d209",
+    "phone": "918600570542",
+    "sender": "ADMIN",
+    "senderName": "HaruViru Booking Approval",
+    "message": "🎉 *HARUVIRU CELEBRATION HOUSE - BOOKING CONFIRMED!* 🎉\n\nHello *Dhiraj Gaikwad*,\nYour celebration slot booking at *HaruViru Celebration House Shikrapur* has been APPROVED & CONFIRMED!\n\n🎟️ *Booking Ref:* HV-2026-8UW9\n📅 *Date:* 2 Oct 2026\n🕒 *Time Slot:* Morning Celebration (9:00 AM - 1:00 PM)\n💰 *Total Paid:* ₹2499\n📍 *Location:* Shikrapur, Pune, Maharashtra 412208, Pune\n\nPlease arrive 10 minutes prior to your reserved slot time. If you have custom cake or theme requests, reply to this message directly!\n\nThank you for choosing HaruViru Celebration House! ✨",
+    "status": "FAILED",
+    "metaId": null,
+    "waLink": null,
+    "timestamp": "2026-10-07T11:25:58.755Z"
+  },
+  {
+    "id": "3a360a4e-03f8-4c3a-91bd-c8742a4a8b20",
+    "phone": "918600570542",
+    "sender": "ADMIN",
+    "senderName": "HaruViru Booking Approval",
+    "message": "🎉 *HARUVIRU CELEBRATION HOUSE - BOOKING CONFIRMED!* 🎉\n\nHello *Dhiraj Gaikwad*,\nYour celebration slot booking at *HaruViru Celebration House Shikrapur* has been APPROVED & CONFIRMED!\n\n🎟️ *Booking Ref:* HV-2026-8UW9\n📅 *Date:* 2 Oct 2026\n🕒 *Time Slot:* Morning Celebration (9:00 AM - 1:00 PM)\n💰 *Total Paid:* ₹2499\n📍 *Location:* Shikrapur, Pune, Maharashtra 412208, Pune\n\nPlease arrive 10 minutes prior to your reserved slot time. If you have custom cake or theme requests, reply to this message directly!\n\nThank you for choosing HaruViru Celebration House! ✨",
+    "status": "SENT",
+    "metaId": null,
+    "waLink": null,
+    "timestamp": "2026-10-07T11:30:56.083Z"
+  },
+  {
+    "id": "f168b254-7815-407f-97a4-7f8a6d77309a",
+    "phone": "918600570542",
+    "sender": "SYSTEM",
+    "senderName": "HaruViru Alert -> HaruViru Celebration House Shikrapur",
+    "message": "🔔 *NEW ONLINE CELEBRATION BOOKING RECEIVED!* 🔔\n\n📍 *Branch:* HaruViru Celebration House Shikrapur\n🎟️ *Booking Ref:* undefined\n👤 *Customer Name:* undefined\n📞 *Customer Phone:* undefined\n📧 *Customer Email:* N/A\n🏛️ *Hall:* Hall 1\n📅 *Date:* Invalid Date\n🕒 *Time Slot:* Celebration Slot\n💰 *Total Amount:* ₹undefined\n💳 *UTR / Txn ID:* Submitted\n\nPlease log into Manager Dashboard to verify payment & confirm slot! ✨",
+    "status": "SENT",
+    "metaId": null,
+    "waLink": null,
+    "timestamp": "2026-10-07T12:03:23.198Z"
   }
 ]
