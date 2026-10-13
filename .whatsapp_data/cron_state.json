@@ -1,0 +1,12 @@
+{
+  "lastAutoRunDate": "2026-10-11",
+  "lastRunAt": "2026-10-11T09:40:08.480Z",
+  "lastSummary": {
+    "dateKey": "2026-10-11",
+    "totalBookingsScanned": 51,
+    "eligibleCount": 0,
+    "sentCount": 0,
+    "skippedCount": 0,
+    "failedCount": 0
+  }
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "tpl-bday-annual",
+    "title": "🎂 Celebrate Birthday Again at HaruViru! (Meta API Approved)",
+    "category": "BIRTHDAY",
+    "message": "🎂 CELEBRATE YOUR BIRTHDAY AGAIN AT HARUVIRU! 🎂\n\nDear {customerName},\nYour birthday is coming up on {eventDate}! 🎈\n\nRe-visit {branchName} to celebrate your special day again in your private celebration house & mini-theater.\nThank You !!!\nVisit website: {bookingLink}",
+    "couponCode": "BDAY2026",
+    "callToActionUrl": "https://haruviru.com/branches",
+    "createdAt": "2026-10-04T07:19:21.110Z"
+  },
+  {
+    "id": "tpl-bday-surprise",
+    "title": "🎈 Special Birthday Party Return Package",
+    "category": "BIRTHDAY",
+    "message": "Hi {customerName}, planning your birthday party on {eventDate}? 🎈 Re-visit {branchName} for a grand celebration with free LED lights & cake setup! Use coupon {couponCode} for special discount. Book now: {bookingLink}",
+    "couponCode": "BDAYSURPRISE",
+    "callToActionUrl": "https://haruviru.com/branches",
+    "createdAt": "2026-10-04T07:19:21.110Z"
+  },
+  {
+    "id": "tpl-anniversary-annual",
+    "title": "💍 Celebrate Anniversary Again at HaruViru! (Meta API Approved)",
+    "category": "ANNIVERSARY",
+    "message": "💍 CELEBRATE YOUR ANNIVERSARY AGAIN AT HARUVIRU! 💍\n\nDear {customerName},\nHappy Anniversary Month! Your anniversary celebration date is on {eventDate}! ✨\n\nRe-live your romantic memories at {branchName} with a complimentary candlelight & cake setup.\nThank You !!!\nVisit website: {bookingLink}",
+    "couponCode": "LOVE2026",
+    "callToActionUrl": "https://haruviru.com/branches",
+    "createdAt": "2026-10-04T07:19:21.110Z"
+  },
+  {
+    "id": "tpl-anniversary-date",
+    "title": "💍 Celebrate Anniversary Again at HaruViru! (Meta API Approved)",
+    "category": "ANNIVERSARY",
+    "message": "💍 CELEBRATE YOUR ANNIVERSARY AGAIN AT HARUVIRU! 💍\n\nDear {customerName},\nHappy Anniversary Month! Your anniversary celebration date is on {eventDate}! ✨\n\nRe-live your romantic memories at {branchName} with a complimentary candlelight & cake setup.\nThank You !!!\nVisit website: {bookingLink}",
+    "couponCode": "ROMANCE20",
+    "callToActionUrl": "https://haruviru.com/branches",
+    "createdAt": "2026-10-04T07:19:21.110Z"
+  }
+]
