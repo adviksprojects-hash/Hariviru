@@ -73,6 +73,8 @@ model Branch {
   whatsapp           String?
   upiId              String?   @default("9762486649@ybl")
   isActive           Boolean   @default(true)
+  depositModeEnabled Boolean   @default(false)
+  depositAmount      Float     @default(500)
   
   managers        User[]    @relation("BranchManager")
   halls           Hall[]

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   createHall,
   updateHall,
@@ -22,6 +23,7 @@ export default function ManagerSettingsClient({
   globalAddOns,
   initialBranchAddOns,
 }) {
+  const router = useRouter();
   const [halls, setHalls] = useState(initialHalls);
   const [branchPackages, setBranchPackages] = useState(initialBranchPackages);
   const [allGlobalPackages, setAllGlobalPackages] = useState(globalPackages);
@@ -29,8 +31,17 @@ export default function ManagerSettingsClient({
   const [allGlobalAddOns, setAllGlobalAddOns] = useState(globalAddOns);
 
   // Deposit settings state
-  const [depositModeEnabled, setDepositModeEnabled] = useState(branch?.depositModeEnabled || false);
-  const [depositAmount, setDepositAmount] = useState(branch?.depositAmount || 500);
+  const [depositModeEnabled, setDepositModeEnabled] = useState(Boolean(branch?.depositModeEnabled));
+  const [depositAmount, setDepositAmount] = useState(branch?.depositAmount ?? 500);
+
+  useEffect(() => {
+    if (branch) {
+      setDepositModeEnabled(Boolean(branch.depositModeEnabled));
+      if (branch.depositAmount !== undefined) {
+        setDepositAmount(branch.depositAmount);
+      }
+    }
+  }, [branch]);
 
   const [activeTab, setActiveTab] = useState("halls");
 
@@ -340,7 +351,14 @@ export default function ManagerSettingsClient({
     try {
       const res = await updateBranchDepositSettings(branch.id, depositModeEnabled, depositAmount);
       if (res.success) {
+        if (res.branch) {
+          setDepositModeEnabled(Boolean(res.branch.depositModeEnabled));
+          if (res.branch.depositAmount !== undefined) {
+            setDepositAmount(res.branch.depositAmount);
+          }
+        }
         setSuccess("Deposit Payment Mode configuration saved successfully!");
+        router.refresh();
       } else {
         setError(res.error || "Failed to update deposit settings.");
       }

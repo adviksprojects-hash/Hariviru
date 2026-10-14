@@ -5,6 +5,7 @@ import { getBranchPackages, getBranchAddOns } from "@/lib/actions";
 import PackageShowcase from "@/components/PackageComponents/PackageShowcase";
 import BranchImageSlider from "@/components/BranchComponents/BranchImageSlider";
 import BranchAvailableSlotsClient from "@/components/BranchComponents/BranchAvailableSlotsClient";
+import { getBranchMapDetails } from "@/lib/maps";
 
 export async function generateMetadata({ params }) {
   const slug = (await params).slug;
@@ -38,11 +39,10 @@ export default async function BranchDetailPage({ params }) {
   const { packages } = await getBranchPackages(branch.id);
   const { addOns } = await getBranchAddOns(branch.id);
 
-  const mapUrl = branch.mapUrl || `https://maps.google.com/?q=${encodeURIComponent(branch.address + " " + branch.city)}`;
+  const { mapUrl, mapEmbedUrl } = getBranchMapDetails(branch);
   const instagram = branch.instagramHandle || "celebration_house_23";
   const whatsapp = branch.whatsapp || branch.phone?.replace(/[^0-9]/g, "") || "9762486649";
   const phone = branch.phone || "+91 97624 86649";
-  const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(branch.address + " " + branch.city)}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
 
   return (
     <main className="flex-1 bg-gradient-to-b from-amber-50/40 via-white to-rose-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen pt-4 pb-12 px-4 relative overflow-hidden">

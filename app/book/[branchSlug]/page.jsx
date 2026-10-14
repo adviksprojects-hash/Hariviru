@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/prisma";
 import { getBranchHalls, getBranchPackages, getBranchAddOns } from "@/lib/actions";
-import { enrichBranchWithDepositSettings } from "@/lib/deposit-settings";
+import { enrichBranchWithDepositSettingsAsync } from "@/lib/deposit-settings";
 import BookingFormClient from "./BookingFormClient";
 
 export async function generateMetadata({ params }) {
@@ -34,7 +34,7 @@ export default async function BookingPage({ params, searchParams }) {
     notFound();
   }
 
-  const branch = enrichBranchWithDepositSettings(rawBranch);
+  const branch = await enrichBranchWithDepositSettingsAsync(rawBranch);
 
   const { halls } = await getBranchHalls(branch.id);
   const { packages } = await getBranchPackages(branch.id);

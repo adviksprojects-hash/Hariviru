@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createBranch, updateBranch, deleteBranch, toggleBranchStatus, assignManagerByEmail, unassignManagerFromBranch } from "@/lib/actions";
+import { parseGoogleMapUrl } from "@/lib/maps";
 
 const SYSTEM_SAMPLE_IMAGES = [
   "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80",
@@ -440,14 +441,19 @@ export default function AdminBranchesClient({ initialBranches }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Google Maps URL</label>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  📍 Google Maps URL or Embed Code
+                </label>
                 <input
-                  type="url"
-                  placeholder="https://maps.google.com/?q=..."
+                  type="text"
+                  placeholder="https://maps.app.goo.gl/... or https://maps.google.com/place/... or <iframe src='...'>"
                   value={formData.mapUrl}
-                  onChange={(e) => setFormData({ ...formData, mapUrl: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-xs"
+                  onChange={(e) => setFormData({ ...formData, mapUrl: parseGoogleMapUrl(e.target.value) })}
+                  className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-xs text-gray-900 dark:text-white"
                 />
+                <span className="text-[10px] text-gray-400 block mt-1">
+                  Paste Google Maps share link, place link, or embed iframe. Used for both interactive embedded map and directions button.
+                </span>
               </div>
 
               {/* Included Amenities & Highlights Admin Configurator */}

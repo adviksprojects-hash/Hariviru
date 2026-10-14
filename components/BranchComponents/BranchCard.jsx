@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { getBranchMapDetails } from "@/lib/maps";
 
 export default function BranchCard({ branch }) {
-  const mapUrl = branch.mapUrl || `https://maps.google.com/?q=${encodeURIComponent(branch.address + " " + branch.city)}`;
+  const { mapUrl } = getBranchMapDetails(branch);
   const instagram = branch.instagramHandle || "celebration_house_23";
   const whatsapp = branch.whatsapp || branch.phone?.replace(/[^0-9]/g, "") || "9762486649";
   const phone = branch.phone || "+91 97624 86649";
