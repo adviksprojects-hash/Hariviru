@@ -52,6 +52,19 @@ export default function ManagerOfflineBookingModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [slotPeriodFilter, setSlotPeriodFilter] = useState("ALL");
+
+  const getSlotHour = (timeStr) => {
+    if (!timeStr) return 0;
+    const str = timeStr.trim().toUpperCase();
+    const isPm = str.includes("PM");
+    const isAm = str.includes("AM");
+    const clean = str.replace(/(AM|PM)/g, "").trim();
+    let h = parseInt(clean.split(":")[0], 10) || 0;
+    if (isPm && h < 12) h += 12;
+    if (isAm && h === 12) h = 0;
+    return h;
+  };
 
   // Fetch slot status dynamically for chosen date & hall (for standard walk-in mode)
   const fetchSlotStatuses = useCallback(async () => {
@@ -354,9 +367,38 @@ export default function ManagerOfflineBookingModal({
           {/* 3. Time Slot Selection OR Custom Extra Booking Timing */}
           {bookingMode === "STANDARD" ? (
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
-                3. Choose Time Slot for {selectedHall?.name || "Selected Hall"}
-              </label>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                  3. Choose Time Slot for {selectedHall?.name || "Selected Hall"}
+                </label>
+
+                {/* Period Filter Tabs */}
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+                  {[
+                    { id: "ALL", label: `All (${slotStatuses.length})` },
+                    { id: "MORNING", label: "🌅 Morning" },
+                    { id: "AFTERNOON", label: "☀️ Afternoon" },
+                    { id: "EVENING", label: "🌆 Evening" },
+                    { id: "NIGHT", label: "🌙 Night" },
+                  ].map((tab) => {
+                    const isTabActive = slotPeriodFilter === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setSlotPeriodFilter(tab.id)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                          isTabActive
+                            ? "bg-rose-600 text-white shadow-xs"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               {loadingSlots ? (
                 <div className="py-6 text-center text-xs text-gray-400 font-medium animate-pulse">
@@ -367,46 +409,56 @@ export default function ManagerOfflineBookingModal({
                   No slots configured for this branch. You can switch to <strong>Extra Booking</strong> above.
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {slotStatuses.map((slot) => {
-                    const isBooked = slot.isBooked;
-                    const isDisabled = slot.isDisabledForDate;
-                    const isPassed = slot.isTimePassed;
-                    const isAvailable = !isBooked && !isDisabled && !isPassed;
-                    const isSelected = selectedSlotId === slot.id;
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[320px] overflow-y-auto pr-1 scrollbar-thin">
+                  {slotStatuses
+                    .filter((slot) => {
+                      if (slotPeriodFilter === "ALL") return true;
+                      const h = getSlotHour(slot.startTime);
+                      if (slotPeriodFilter === "MORNING") return h >= 6 && h < 12;
+                      if (slotPeriodFilter === "AFTERNOON") return h >= 12 && h < 17;
+                      if (slotPeriodFilter === "EVENING") return h >= 17 && h < 22;
+                      if (slotPeriodFilter === "NIGHT") return h >= 22 || h < 6;
+                      return true;
+                    })
+                    .map((slot) => {
+                      const isBooked = slot.isBooked;
+                      const isDisabled = slot.isDisabledForDate;
+                      const isPassed = slot.isTimePassed;
+                      const isAvailable = !isBooked && !isDisabled && !isPassed;
+                      const isSelected = selectedSlotId === slot.id;
 
-                    return (
-                      <button
-                        key={slot.id}
-                        type="button"
-                        disabled={!isAvailable}
-                        onClick={() => setSelectedSlotId(slot.id)}
-                        className={`p-3 rounded-2xl border text-left text-xs transition-all relative flex flex-col justify-between ${
-                          isSelected
-                            ? "border-rose-600 bg-rose-600 text-white shadow-md scale-102"
-                            : isAvailable
-                            ? "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-rose-300 text-gray-900 dark:text-white"
-                            : "border-gray-100 dark:border-gray-800/50 bg-gray-100/60 dark:bg-gray-800/30 text-gray-400 cursor-not-allowed opacity-60"
-                        }`}
-                      >
-                        <div className="font-bold">{slot.title}</div>
-                        <div className="text-[11px] opacity-80 mt-0.5">
-                          🕒 {slot.startTime} - {slot.endTime}
-                        </div>
-                        <div className="mt-2 text-[10px] font-bold">
-                          {isBooked ? (
-                            <span className="text-rose-600">🔴 Booked</span>
-                          ) : isPassed ? (
-                            <span className="text-gray-400">⏱️ Passed</span>
-                          ) : (
-                            <span className={isSelected ? "text-white" : "text-emerald-600 font-black"}>
-                              ₹{slot.price} • Available
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
+                      return (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          disabled={!isAvailable}
+                          onClick={() => setSelectedSlotId(slot.id)}
+                          className={`p-3 rounded-2xl border text-left text-xs transition-all relative flex flex-col justify-between ${
+                            isSelected
+                              ? "border-rose-600 bg-rose-600 text-white shadow-md scale-102"
+                              : isAvailable
+                              ? "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-rose-300 text-gray-900 dark:text-white cursor-pointer"
+                              : "border-gray-100 dark:border-gray-800/50 bg-gray-100/60 dark:bg-gray-800/30 text-gray-400 cursor-not-allowed opacity-60"
+                          }`}
+                        >
+                          <div className="font-bold">{slot.title}</div>
+                          <div className="text-[11px] opacity-80 mt-0.5">
+                            🕒 {slot.startTime} - {slot.endTime}
+                          </div>
+                          <div className="mt-2 text-[10px] font-bold">
+                            {isBooked ? (
+                              <span className="text-rose-600">🔴 Booked</span>
+                            ) : isPassed ? (
+                              <span className="text-gray-400">⏱️ Passed</span>
+                            ) : (
+                              <span className={isSelected ? "text-white" : "text-emerald-600 font-black"}>
+                                ₹{slot.price} • Available
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
                 </div>
               )}
             </div>

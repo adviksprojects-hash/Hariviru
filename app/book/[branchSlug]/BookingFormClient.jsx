@@ -31,6 +31,7 @@ export default function BookingFormClient({
   const [loadingSlots, setLoadingSlots] = useState(true);
 
   const [selectedSlotId, setSelectedSlotId] = useState(initialSlotId || "");
+  const [slotPeriodFilter, setSlotPeriodFilter] = useState("ALL");
   const [selectedAddOns, setSelectedAddOns] = useState({}); // { [addonId]: quantity }
   const [eventCategory, setEventCategory] = useState("");
   const [paymentType, setPaymentType] = useState("FULL"); // FULL or DEPOSIT
@@ -652,54 +653,103 @@ export default function BookingFormClient({
                 No slots configured for this date.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {slotStatuses.map((s) => {
-                  const isAvailable = !s.isBooked && !s.isDisabledForDate && !s.isTimePassed;
-                  const isSelected = selectedSlotId === s.id;
+              <div className="space-y-2.5">
+                {/* Period Filter Tabs */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  {[
+                    { id: "ALL", label: `All 24 Slots (${slotStatuses.length})` },
+                    { id: "MORNING", label: "🌅 Morning (6 AM - 12 PM)" },
+                    { id: "AFTERNOON", label: "☀️ Afternoon (12 PM - 5 PM)" },
+                    { id: "EVENING", label: "🌆 Evening (5 PM - 10 PM)" },
+                    { id: "NIGHT", label: "🌙 Night (10 PM - 6 AM)" },
+                  ].map((tab) => {
+                    const isTabActive = slotPeriodFilter === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setSlotPeriodFilter(tab.id)}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                          isTabActive
+                            ? "bg-rose-600 text-white shadow-xs"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
 
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      disabled={!isAvailable}
-                      onClick={() => isAvailable && setSelectedSlotId(s.id)}
-                      className={`p-4 rounded-2xl border text-left flex items-center justify-between transition-all ${
-                        isSelected && isAvailable
-                          ? "border-rose-600 bg-rose-50 dark:bg-rose-950/40 ring-2 ring-rose-500 shadow-md"
-                          : isAvailable
-                          ? "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300"
-                          : "border-gray-200/60 dark:border-gray-800/60 bg-gray-100 dark:bg-gray-800/40 opacity-60 cursor-not-allowed"
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold text-sm text-gray-900 dark:text-white">{s.title}</div>
-                        <div className="text-xs text-gray-500">🕒 {s.startTime} - {s.endTime}</div>
-                      </div>
+                {/* 24-Slot Scrollable Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[440px] overflow-y-auto pr-1 scrollbar-thin">
+                  {slotStatuses
+                    .filter((s) => {
+                      if (slotPeriodFilter === "ALL") return true;
+                      const str = (s.startTime || "").trim().toUpperCase();
+                      const isPm = str.includes("PM");
+                      const isAm = str.includes("AM");
+                      const clean = str.replace(/(AM|PM)/g, "").trim();
+                      let h = parseInt(clean.split(":")[0], 10) || 0;
+                      if (isPm && h < 12) h += 12;
+                      if (isAm && h === 12) h = 0;
 
-                      {isAvailable ? (
-                        <span
-                          className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                            isSelected ? "bg-rose-600 text-white" : "bg-emerald-100 text-emerald-800"
+                      if (slotPeriodFilter === "MORNING") return h >= 6 && h < 12;
+                      if (slotPeriodFilter === "AFTERNOON") return h >= 12 && h < 17;
+                      if (slotPeriodFilter === "EVENING") return h >= 17 && h < 22;
+                      if (slotPeriodFilter === "NIGHT") return h >= 22 || h < 6;
+                      return true;
+                    })
+                    .map((s) => {
+                      const isAvailable = !s.isBooked && !s.isDisabledForDate && !s.isTimePassed;
+                      const isSelected = selectedSlotId === s.id;
+
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          disabled={!isAvailable}
+                          onClick={() => isAvailable && setSelectedSlotId(s.id)}
+                          className={`p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                            isSelected && isAvailable
+                              ? "border-rose-600 bg-rose-50 dark:bg-rose-950/40 ring-2 ring-rose-500 shadow-md"
+                              : isAvailable
+                              ? "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 cursor-pointer"
+                              : "border-gray-200/60 dark:border-gray-800/60 bg-gray-100 dark:bg-gray-800/40 opacity-60 cursor-not-allowed"
                           }`}
                         >
-                          {isSelected ? "Selected ✓" : "Available"}
-                        </span>
-                      ) : s.isTimePassed ? (
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                          ⏰ Time Passed
-                        </span>
-                      ) : s.isBooked ? (
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-100 text-rose-800">
-                          🔴 Booked
-                        </span>
-                      ) : (
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-200 text-gray-600">
-                          🚫 Unavailable
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+                          <div>
+                            <div className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white line-clamp-1">
+                              {s.title}
+                            </div>
+                            <div className="text-[11px] text-gray-500 mt-0.5">🕒 {s.startTime} - {s.endTime}</div>
+                          </div>
+
+                          {isAvailable ? (
+                            <span
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                isSelected ? "bg-rose-600 text-white" : "bg-emerald-100 text-emerald-800"
+                              }`}
+                            >
+                              {isSelected ? "Selected ✓" : "Available"}
+                            </span>
+                          ) : s.isTimePassed ? (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 shrink-0">
+                              ⏰ Passed
+                            </span>
+                          ) : s.isBooked ? (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 shrink-0">
+                              🔴 Booked
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 shrink-0">
+                              🚫 Blocked
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                </div>
               </div>
             )}
           </div>

@@ -8,6 +8,7 @@ import {
   toggleSlotStatus,
   toggleSlotDisabledDate,
   getBranchSlotStatusForDate,
+  resetBranchSlotsTo24HoursAction,
 } from "@/lib/actions";
 
 function parse12hParts(timeStr) {
@@ -104,6 +105,43 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [resetting, setResetting] = useState(false);
+  const [periodFilter, setPeriodFilter] = useState("ALL");
+
+  const getSlotHour = (timeStr) => {
+    if (!timeStr) return 0;
+    const str = timeStr.trim().toUpperCase();
+    const isPm = str.includes("PM");
+    const isAm = str.includes("AM");
+    const clean = str.replace(/(AM|PM)/g, "").trim();
+    let h = parseInt(clean.split(":")[0], 10) || 0;
+    if (isPm && h < 12) h += 12;
+    if (isAm && h === 12) h = 0;
+    return h;
+  };
+
+  const handleResetTo24Slots = async () => {
+    if (
+      !confirm(
+        `Are you sure you want to reset all slots for ${branch.name} to the standard 24 1-hour slots (00:00 to 24:00)? This will replace custom slots with 24 individual 1-hour slots.`
+      )
+    ) {
+      return;
+    }
+
+    setResetting(true);
+    try {
+      const res = await resetBranchSlotsTo24HoursAction(branch.id);
+      if (res.success) {
+        alert("Successfully configured 24 1-hour slots for this branch!");
+        window.location.reload();
+      }
+    } catch (err) {
+      alert("Failed to reset slots: " + (err.message || "Unknown error"));
+    } finally {
+      setResetting(false);
+    }
+  };
 
   // Fetch date specific status whenever date or base slots change
   const fetchDateStatuses = useCallback(async () => {
@@ -252,6 +290,19 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
   const disabledCount = dateSlotStatuses.filter((s) => s.isDisabledForDate).length;
   const availableCount = dateSlotStatuses.filter((s) => !s.isBooked && !s.isDisabledForDate).length;
 
+  const filterByPeriod = (s) => {
+    if (periodFilter === "ALL") return true;
+    const h = getSlotHour(s.startTime);
+    if (periodFilter === "MORNING") return h >= 6 && h < 12;
+    if (periodFilter === "AFTERNOON") return h >= 12 && h < 17;
+    if (periodFilter === "EVENING") return h >= 17 && h < 22;
+    if (periodFilter === "NIGHT") return h >= 22 || h < 6;
+    return true;
+  };
+
+  const filteredDateSlotStatuses = dateSlotStatuses.filter(filterByPeriod);
+  const filteredSlots = slots.filter(filterByPeriod);
+
   return (
     <div className="space-y-8">
       
@@ -261,22 +312,42 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
             <div>
               <h2 className="text-xl font-black text-gray-900 dark:text-white">
-                📅 Date-Wise Slot Availability & Control
+                📅 Date-Wise Slot Availability & Control (24 Hours)
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Slots apply by default every day. Select a date below to view bookings or disable specific slots for that date.
+                Slots apply by default every day (24 one-hour slots). Select a date below to view bookings or disable specific slots for that date.
               </p>
             </div>
 
-            {/* Date Input */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-500">Pick Date:</span>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="px-3 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
-              />
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleResetTo24Slots}
+                disabled={resetting}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
+              >
+                {resetting ? (
+                  <>
+                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Resetting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>⚡ Reset to 24 Default 1-Hour Slots</span>
+                  </>
+                )}
+              </button>
+
+              {/* Date Input */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-gray-500">Pick Date:</span>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
+                />
+              </div>
             </div>
           </div>
 
@@ -319,19 +390,52 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
 
         {/* Date Slots List */}
         <div>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
-            Slot Status for <span className="text-rose-600">{selectedDate}</span>:
-          </h3>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+              Slot Status for <span className="text-rose-600">{selectedDate}</span>:
+            </h3>
+
+            {/* Time Period Filter Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {[
+                { id: "ALL", label: `All 24 Slots (${dateSlotStatuses.length})` },
+                { id: "MORNING", label: "🌅 Morning (6 AM - 12 PM)" },
+                { id: "AFTERNOON", label: "☀️ Afternoon (12 PM - 5 PM)" },
+                { id: "EVENING", label: "🌆 Evening (5 PM - 10 PM)" },
+                { id: "NIGHT", label: "🌙 Night (10 PM - 6 AM)" },
+              ].map((tab) => {
+                const isSelected = periodFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setPeriodFilter(tab.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                      isSelected
+                        ? "bg-rose-600 text-white shadow-xs"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {loadingDateSlots ? (
             <div className="py-8 text-center text-xs text-gray-400 font-semibold animate-pulse">
               Loading date availability...
             </div>
-          ) : dateSlotStatuses.length === 0 ? (
-            <div className="py-6 text-center text-xs text-gray-400">No active slots found.</div>
+          ) : filteredDateSlotStatuses.length === 0 ? (
+            <div className="py-6 text-center text-xs text-gray-400">
+              {dateSlotStatuses.length === 0
+                ? "No active slots found."
+                : "No slots match the selected time period filter."}
+            </div>
           ) : (
-            <div className="space-y-3">
-              {dateSlotStatuses.map((st) => (
+            <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1 scrollbar-thin">
+              {filteredDateSlotStatuses.map((st) => (
                 <div
                   key={st.id}
                   className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
@@ -395,15 +499,22 @@ export default function ManagerSlotsClient({ branch, initialSlots }) {
 
       {/* Global Configured Slots List (Edit / Delete / Permanent Toggle) */}
       <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 border border-gray-200 dark:border-gray-800 shadow-xs">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-          All Configured Time Slots ({branch.name})
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            All Configured Time Slots ({branch.name})
+            <span className="text-xs font-normal text-gray-400 ml-2">({slots.length} total)</span>
+          </h2>
+        </div>
 
-        {slots.length === 0 ? (
-          <p className="text-sm text-gray-500 py-6 text-center">No slots configured for this branch.</p>
+        {filteredSlots.length === 0 ? (
+          <p className="text-sm text-gray-500 py-6 text-center">
+            {slots.length === 0
+              ? "No slots configured for this branch."
+              : "No slots match the selected period filter."}
+          </p>
         ) : (
-          <div className="space-y-3">
-            {slots.map((slot) => (
+          <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1 scrollbar-thin">
+            {filteredSlots.map((slot) => (
               <div
                 key={slot.id}
                 className="p-4 rounded-2xl border border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
