@@ -47,7 +47,7 @@ export default function BookingFormClient({
   const [error, setError] = useState(null);
   const [bookingResult, setBookingResult] = useState(null);
 
-  const branchUpiId = branch.upiId || "9762486649@ybl";
+  const branchUpiId = (branch.upiId || "9762486649@ybl").trim();
   const selectedHall = activeHalls.find((h) => h.id === selectedHallId) || activeHalls[0];
 
   // Fetch slot status for the chosen date and hall
@@ -233,9 +233,17 @@ export default function BookingFormClient({
 
   const datePills = [0, 1, 2, 3, 4, 5, 6].map(getDateOffsetPill);
 
-  const upiQrData = `upi://pay?pa=${encodeURIComponent(branchUpiId)}&pn=${encodeURIComponent(
+  const cleanUpiId = (branchUpiId || "9762486649@ybl").trim();
+  const cleanPayableAmount = Math.max(0, Math.round(Number(payableAmount || 0)));
+  const cleanNote = (`Slot Booking ${selectedSlot?.title || ""}`)
+    .replace(/[^a-zA-Z0-9\s-]/g, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 40)
+    .trim();
+
+  const upiQrData = `upi://pay?pa=${encodeURIComponent(cleanUpiId)}&pn=${encodeURIComponent(
     "HaruViru Celebration House"
-  )}&am=${payableAmount}&cu=INR&tn=${encodeURIComponent(`Slot Booking ${selectedSlot?.title || ""}`)}`;
+  )}&am=${cleanPayableAmount}&cu=INR&tn=${encodeURIComponent(cleanNote)}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(upiQrData)}`;
 
   if (bookingResult) {

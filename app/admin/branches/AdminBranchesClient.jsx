@@ -140,7 +140,7 @@ export default function AdminBranchesClient({ initialBranches }) {
         mapUrl: formData.mapUrl || `https://maps.google.com/?q=${encodeURIComponent(formData.address + " " + formData.city)}`,
         instagramHandle: formData.instagramHandle || "celebration_house_23",
         whatsapp: formData.whatsapp || formData.phone.replace(/[^0-9]/g, ""),
-        upiId: formData.upiId || "9762486649@ybl",
+        upiId: formData.upiId ? formData.upiId.trim() : "9762486649@ybl",
         description: formData.description,
         images: allImages,
         amenities: formData.amenities,
@@ -200,7 +200,7 @@ export default function AdminBranchesClient({ initialBranches }) {
         mapUrl: formData.mapUrl,
         instagramHandle: formData.instagramHandle,
         whatsapp: formData.whatsapp,
-        upiId: formData.upiId,
+        upiId: formData.upiId ? formData.upiId.trim() : "9762486649@ybl",
         description: formData.description,
         images: allImages,
         amenities: formData.amenities,
@@ -434,7 +434,7 @@ export default function AdminBranchesClient({ initialBranches }) {
                     required
                     placeholder="9762486649@ybl"
                     value={formData.upiId}
-                    onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, upiId: e.target.value.trim() })}
                     className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-300 text-xs font-mono font-bold text-rose-600"
                   />
                 </div>
