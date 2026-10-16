@@ -57,7 +57,7 @@ export async function generateMetadata({ params }) {
       url: `https://haruviru.com/branches/${branch.slug}`,
       siteName: "HaruViru Celebration House",
       locale: "en_IN",
-      type: "business.business",
+      type: "website",
       images: [
         {
           url: branch.images?.[0] || "/icons/icon-512x512.png",
