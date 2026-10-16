@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { updateBookingStatus, settleBookingBalance } from "@/lib/actions";
-import { buildWhatsAppConfirmationText } from "@/lib/whatsapp";
+import { buildWhatsAppConfirmationText } from "@/lib/whatsapp-text";
 import ManagerOfflineBookingModal from "./ManagerOfflineBookingModal";
 
 export default function ManagerBookingsClient({

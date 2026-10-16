@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/rbac";
 import { getAllPackagesForAdmin, getAllAddOnsForAdmin } from "@/lib/actions";
+import { getAdminNotificationSettings } from "@/lib/system-settings";
 import AdminSettingsClient from "./AdminSettingsClient";
 
 export const metadata = {
@@ -12,6 +13,7 @@ export default async function AdminSettingsPage() {
 
   const { packages } = await getAllPackagesForAdmin();
   const { addOns } = await getAllAddOnsForAdmin();
+  const notificationSettings = await getAdminNotificationSettings();
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10 px-4">
@@ -30,7 +32,7 @@ export default async function AdminSettingsPage() {
               ⚙️ Admin System Settings
             </h1>
             <p className="text-sm text-gray-500">
-              Manage default celebration packages and global celebration add-ons.
+              Manage WhatsApp alerts, default celebration packages, and global add-ons.
             </p>
           </div>
         </div>
@@ -38,6 +40,7 @@ export default async function AdminSettingsPage() {
         <AdminSettingsClient
           initialPackages={packages || []}
           initialAddOns={addOns || []}
+          initialNotificationSettings={notificationSettings}
         />
       </div>
     </main>

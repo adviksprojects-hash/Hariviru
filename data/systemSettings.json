@@ -1,0 +1,7 @@
+{
+  "ADMIN_WHATSAPP_PHONE": "8329208942",
+  "ADMIN_NOTIFY_ONLINE": "true",
+  "ADMIN_NOTIFY_WALKIN": "true",
+  "ADMIN_NOTIFY_EXTRA": "true",
+  "ADMIN_WHATSAPP_TEMPLATE_NAME": "admin_booking_alert"
+}

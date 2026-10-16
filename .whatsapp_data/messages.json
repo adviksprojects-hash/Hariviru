@@ -592,5 +592,27 @@
     "metaId": null,
     "waLink": null,
     "timestamp": "2026-10-11T09:04:38.989Z"
+  },
+  {
+    "id": "613f329b-48d4-461e-a0bd-6ebacd116214",
+    "phone": "919762486649",
+    "sender": "SYSTEM",
+    "senderName": "Admin Booking Alert -> TEST-HV-8112",
+    "message": "🔔 *NEW HARUVIRU BOOKING CONFIRMED!* 🔔\n\n🏢 *Branch:* HaruViru Celebration House Shikrapur\n🎟️ *Booking Ref:* TEST-HV-8112\n📌 *Type:* Sample Test Alert (Admin Settings)\n👤 *Customer:* Rahul Sharma (Sample)\n📞 *Phone:* 9876543210\n📅 *Date:* 16 Oct 2026\n🕒 *Slot:* 06:00 PM - 07:00 PM Slot\n🏛️ *Hall:* Hall 1 (Main)\n💰 *Total Amount:* ₹1499\n💳 *Payment:* PAID (Full)\n\nPlease check the Admin & Manager Dashboard for complete booking details! ✨",
+    "status": "SENT",
+    "metaId": null,
+    "waLink": "https://wa.me/919762486649?text=%F0%9F%94%94%20*NEW%20HARUVIRU%20BOOKING%20CONFIRMED!*%20%F0%9F%94%94%0A%0A%F0%9F%8F%A2%20*Branch%3A*%20HaruViru%20Celebration%20House%20Shikrapur%0A%F0%9F%8E%9F%EF%B8%8F%20*Booking%20Ref%3A*%20TEST-HV-8112%0A%F0%9F%93%8C%20*Type%3A*%20Sample%20Test%20Alert%20(Admin%20Settings)%0A%F0%9F%91%A4%20*Customer%3A*%20Rahul%20Sharma%20(Sample)%0A%F0%9F%93%9E%20*Phone%3A*%209876543210%0A%F0%9F%93%85%20*Date%3A*%2016%20Oct%202026%0A%F0%9F%95%92%20*Slot%3A*%2006%3A00%20PM%20-%2007%3A00%20PM%20Slot%0A%F0%9F%8F%9B%EF%B8%8F%20*Hall%3A*%20Hall%201%20(Main)%0A%F0%9F%92%B0%20*Total%20Amount%3A*%20%E2%82%B91499%0A%F0%9F%92%B3%20*Payment%3A*%20PAID%20(Full)%0A%0APlease%20check%20the%20Admin%20%26%20Manager%20Dashboard%20for%20complete%20booking%20details!%20%E2%9C%A8",
+    "timestamp": "2026-10-16T15:43:19.524Z"
+  },
+  {
+    "id": "86397b3a-42e2-4d8b-82c2-a9b4fd7735c7",
+    "phone": "918329208942",
+    "sender": "SYSTEM",
+    "senderName": "Admin Booking Alert -> TEST-HV-3635",
+    "message": "🔔 *NEW HARUVIRU BOOKING CONFIRMED!* 🔔\n\n🏢 *Branch:* HaruViru Celebration House Shikrapur\n🎟️ *Booking Ref:* TEST-HV-3635\n📌 *Type:* Sample Test Alert (Admin Settings)\n👤 *Customer:* Rahul Sharma (Sample)\n📞 *Phone:* 9876543210\n📅 *Date:* 16 Oct 2026\n🕒 *Slot:* 06:00 PM - 07:00 PM Slot\n🏛️ *Hall:* Hall 1 (Main)\n💰 *Total Amount:* ₹1499\n💳 *Payment:* PAID (Full)\n\nPlease check the Admin & Manager Dashboard for complete booking details! ✨",
+    "status": "SENT",
+    "metaId": null,
+    "waLink": "https://wa.me/918329208942?text=%F0%9F%94%94%20*NEW%20HARUVIRU%20BOOKING%20CONFIRMED!*%20%F0%9F%94%94%0A%0A%F0%9F%8F%A2%20*Branch%3A*%20HaruViru%20Celebration%20House%20Shikrapur%0A%F0%9F%8E%9F%EF%B8%8F%20*Booking%20Ref%3A*%20TEST-HV-3635%0A%F0%9F%93%8C%20*Type%3A*%20Sample%20Test%20Alert%20(Admin%20Settings)%0A%F0%9F%91%A4%20*Customer%3A*%20Rahul%20Sharma%20(Sample)%0A%F0%9F%93%9E%20*Phone%3A*%209876543210%0A%F0%9F%93%85%20*Date%3A*%2016%20Oct%202026%0A%F0%9F%95%92%20*Slot%3A*%2006%3A00%20PM%20-%2007%3A00%20PM%20Slot%0A%F0%9F%8F%9B%EF%B8%8F%20*Hall%3A*%20Hall%201%20(Main)%0A%F0%9F%92%B0%20*Total%20Amount%3A*%20%E2%82%B91499%0A%F0%9F%92%B3%20*Payment%3A*%20PAID%20(Full)%0A%0APlease%20check%20the%20Admin%20%26%20Manager%20Dashboard%20for%20complete%20booking%20details!%20%E2%9C%A8",
+    "timestamp": "2026-10-16T15:44:01.353Z"
   }
 ]

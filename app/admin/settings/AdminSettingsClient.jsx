@@ -8,9 +8,15 @@ import {
   createAddOn,
   updateAddOn,
   deleteAddOn,
+  saveAdminNotificationSettingsAction,
+  testAdminNotificationWhatsAppAction,
 } from "@/lib/actions";
 
-export default function AdminSettingsClient({ initialPackages, initialAddOns }) {
+export default function AdminSettingsClient({
+  initialPackages,
+  initialAddOns,
+  initialNotificationSettings,
+}) {
   const [packages, setPackages] = useState(initialPackages);
   const [addOns, setAddOns] = useState(initialAddOns);
   const [activeTab, setActiveTab] = useState("packages");
@@ -18,6 +24,24 @@ export default function AdminSettingsClient({ initialPackages, initialAddOns }) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Admin Notification Settings State
+  const [adminPhone, setAdminPhone] = useState(initialNotificationSettings?.adminPhone || "9762486649");
+  const [notifyOnOnlineConfirm, setNotifyOnOnlineConfirm] = useState(
+    initialNotificationSettings?.notifyOnOnlineConfirm ?? true
+  );
+  const [notifyOnWalkIn, setNotifyOnWalkIn] = useState(
+    initialNotificationSettings?.notifyOnWalkIn ?? true
+  );
+  const [notifyOnExtra, setNotifyOnExtra] = useState(
+    initialNotificationSettings?.notifyOnExtra ?? true
+  );
+  const [templateName, setTemplateName] = useState(
+    initialNotificationSettings?.templateName || "admin_booking_alert"
+  );
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [testingAlert, setTestingAlert] = useState(false);
+  const [copiedTemplate, setCopiedTemplate] = useState(false);
 
   // Package Modal State
   const [showPkgModal, setShowPkgModal] = useState(false);
@@ -209,6 +233,75 @@ export default function AdminSettingsClient({ initialPackages, initialAddOns }) 
     }
   };
 
+  // --- ADMIN NOTIFICATION HANDLERS ---
+  const handleSaveNotifications = async (e) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    setError("");
+    setSuccess("");
+    try {
+      const cleanPhone = adminPhone.replace(/[^0-9]/g, "");
+      if (cleanPhone.length < 10) {
+        throw new Error("Please enter a valid 10-digit WhatsApp phone number.");
+      }
+      const res = await saveAdminNotificationSettingsAction({
+        adminPhone: cleanPhone,
+        notifyOnOnlineConfirm,
+        notifyOnWalkIn,
+        notifyOnExtra,
+        templateName: templateName.trim() || "admin_booking_alert",
+      });
+      if (res.success) {
+        setSuccess("Admin WhatsApp Notification settings saved successfully!");
+      } else {
+        setError(res.error || "Failed to save settings.");
+      }
+    } catch (err) {
+      setError(err.message || "Error saving notification settings.");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleTestAlert = async () => {
+    setTestingAlert(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await testAdminNotificationWhatsAppAction();
+      if (res.success) {
+        setSuccess(`✅ Test WhatsApp message sent to ${res.cleanPhone}! Please check your WhatsApp.`);
+      } else {
+        setError(res.error || "Could not send test message. Check Meta Cloud API token or phone configuration.");
+      }
+    } catch (err) {
+      setError(err.message || "Failed to send test WhatsApp message.");
+    } finally {
+      setTestingAlert(false);
+    }
+  };
+
+  const templateSampleText = `🔔 *NEW HARUVIRU BOOKING CONFIRMED!* 🔔
+
+🏢 *Branch:* {{1}}
+🎟️ *Booking Ref:* {{2}}
+📌 *Type:* {{3}}
+👤 *Customer:* {{4}}
+📞 *Phone:* {{5}}
+📅 *Date:* {{6}}
+🕒 *Slot:* {{7}}
+🏛️ *Hall:* {{8}}
+💰 *Total Amount:* ₹{{9}}
+💳 *Payment:* {{10}}
+
+Please check the Admin & Manager Dashboard for complete booking details! ✨`;
+
+  const handleCopyTemplate = () => {
+    navigator.clipboard.writeText(templateSampleText);
+    setCopiedTemplate(true);
+    setTimeout(() => setCopiedTemplate(false), 2500);
+  };
+
   return (
     <div className="space-y-6">
       {error && (
@@ -243,6 +336,16 @@ export default function AdminSettingsClient({ initialPackages, initialAddOns }) 
           }`}
         >
           ✨ Celebration Add-Ons ({addOns.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("notifications")}
+          className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+            activeTab === "notifications"
+              ? "border-rose-600 text-rose-600"
+              : "border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white"
+          }`}
+        >
+          <span>🔔 Admin WhatsApp Alerts</span>
         </button>
       </div>
 
@@ -379,6 +482,222 @@ export default function AdminSettingsClient({ initialPackages, initialAddOns }) 
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: ADMIN WHATSAPP ALERTS */}
+      {activeTab === "notifications" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Settings Form */}
+          <div className="lg:col-span-7 bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 shadow-xs space-y-6">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-rose-100 text-rose-600 text-lg">🔔</span>
+                <h2 className="text-xl font-black text-gray-900 dark:text-white">
+                  Admin WhatsApp Alerts Configuration
+                </h2>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Receive instant automated WhatsApp alerts whenever a manager confirms an online booking, logs a walk-in, or logs an extra booking.
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveNotifications} className="space-y-5">
+              {/* Admin WhatsApp Number Field */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+                <label className="block text-xs font-bold text-gray-800 dark:text-gray-200 mb-1">
+                  📱 Admin WhatsApp Number (Receives Booking Alerts) *
+                </label>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="px-3 py-2.5 rounded-xl bg-gray-200 dark:bg-gray-700 text-xs font-bold text-gray-700 dark:text-gray-300">
+                    🇮🇳 +91
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    maxLength={10}
+                    placeholder="e.g. 9762486649"
+                    value={adminPhone}
+                    onChange={(e) => setAdminPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+                <span className="text-[11px] text-gray-400 block mt-1.5">
+                  Enter your 10-digit WhatsApp phone number without country code.
+                </span>
+              </div>
+
+              {/* Event Triggers */}
+              <div className="space-y-3">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500">
+                  Notify Admin On These Events:
+                </label>
+
+                <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">✅</span>
+                    <div>
+                      <div className="text-xs font-bold text-gray-900 dark:text-white">
+                        Online Booking Confirmation
+                      </div>
+                      <div className="text-[11px] text-gray-500">
+                        When branch manager reviews and confirms a customer online booking.
+                      </div>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifyOnOnlineConfirm}
+                    onChange={(e) => setNotifyOnOnlineConfirm(e.target.checked)}
+                    className="w-5 h-5 text-rose-600 rounded border-gray-300 focus:ring-rose-500 cursor-pointer"
+                  />
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🚶</span>
+                    <div>
+                      <div className="text-xs font-bold text-gray-900 dark:text-white">
+                        Walk-in Offline Booking
+                      </div>
+                      <div className="text-[11px] text-gray-500">
+                        When branch manager records a walk-in celebration at the venue.
+                      </div>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifyOnWalkIn}
+                    onChange={(e) => setNotifyOnWalkIn(e.target.checked)}
+                    className="w-5 h-5 text-rose-600 rounded border-gray-300 focus:ring-rose-500 cursor-pointer"
+                  />
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">⚡</span>
+                    <div>
+                      <div className="text-xs font-bold text-gray-900 dark:text-white">
+                        Extra Booking (Beyond Standard Slots)
+                      </div>
+                      <div className="text-[11px] text-gray-500">
+                        When branch manager records a custom timing or extra hall celebration.
+                      </div>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifyOnExtra}
+                    onChange={(e) => setNotifyOnExtra(e.target.checked)}
+                    className="w-5 h-5 text-rose-600 rounded border-gray-300 focus:ring-rose-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Template Name in Meta */}
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+                <label className="block text-xs font-bold text-gray-800 dark:text-gray-200 mb-1">
+                  Meta WhatsApp Template Name
+                </label>
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value.trim())}
+                  placeholder="admin_booking_alert"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-mono font-bold text-gray-900 dark:text-white"
+                />
+                <span className="text-[11px] text-gray-400 block mt-1">
+                  Default template name is <code>admin_booking_alert</code>. If Meta template is still pending approval, messages will automatically fallback to direct WhatsApp text.
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={savingSettings}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                  {savingSettings ? "Saving Settings..." : "💾 Save WhatsApp Settings"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTestAlert}
+                  disabled={testingAlert}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                  {testingAlert ? "Sending Test Message..." : "📱 Send Test WhatsApp Message"}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Right Column: Facebook Business Suite Template Guide */}
+          <div className="lg:col-span-5 bg-gradient-to-br from-purple-50/80 via-white to-pink-50/80 dark:from-gray-900 dark:via-gray-900 dark:to-purple-950/30 rounded-3xl p-6 sm:p-7 border border-purple-200/80 dark:border-purple-900/50 shadow-xs space-y-5">
+            <div>
+              <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 text-[11px] font-bold uppercase tracking-wider">
+                Facebook Business Suite
+              </span>
+              <h3 className="text-lg font-black text-gray-900 dark:text-white mt-2">
+                📋 Meta WhatsApp Template Details
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Add this template in your Meta WhatsApp Manager (Facebook Business Suite) under Message Templates.
+              </p>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-purple-100 dark:border-purple-900">
+                <span className="text-gray-500 font-medium">Template Name:</span>
+                <span className="font-mono font-bold text-purple-700 dark:text-purple-300">admin_booking_alert</span>
+              </div>
+              <div className="flex justify-between p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-purple-100 dark:border-purple-900">
+                <span className="text-gray-500 font-medium">Category:</span>
+                <span className="font-bold text-emerald-700 dark:text-emerald-400">Utility</span>
+              </div>
+              <div className="flex justify-between p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-purple-100 dark:border-purple-900">
+                <span className="text-gray-500 font-medium">Language:</span>
+                <span className="font-bold text-gray-800 dark:text-gray-200">English (en)</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Template Body Text (Exact Format):
+                </label>
+                <button
+                  type="button"
+                  onClick={handleCopyTemplate}
+                  className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-[11px] transition-colors"
+                >
+                  {copiedTemplate ? "Copied! ✓" : "Copy Template"}
+                </button>
+              </div>
+              <pre className="p-3.5 rounded-2xl bg-gray-900 text-purple-200 text-[11px] font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap select-all">
+                {templateSampleText}
+              </pre>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs space-y-1.5">
+              <div className="font-bold text-amber-900 dark:text-amber-300">
+                ℹ️ Template Variable Guide (10 Parameters):
+              </div>
+              <ul className="text-[11px] text-amber-800 dark:text-amber-400 space-y-0.5 list-disc pl-4 font-mono">
+                <li>{"{{1}}"} : Branch Name (e.g. HaruViru Shikrapur)</li>
+                <li>{"{{2}}"} : Booking Ref (e.g. HV-2026-BOOK-42)</li>
+                <li>{"{{3}}"} : Booking Type (Online / Walk-in / Extra)</li>
+                <li>{"{{4}}"} : Customer Full Name</li>
+                <li>{"{{5}}"} : Customer Phone Number</li>
+                <li>{"{{6}}"} : Celebration Date (e.g. 25 Oct 2026)</li>
+                <li>{"{{7}}"} : Reserved Slot (e.g. 06:00 PM - 07:00 PM)</li>
+                <li>{"{{8}}"} : Hall Name (e.g. Hall 1)</li>
+                <li>{"{{9}}"} : Total / Deposit Paid Amount</li>
+                <li>{"{{10}}"} : Payment Status (PAID / PARTIAL)</li>
+              </ul>
+            </div>
           </div>
         </div>
       )}
