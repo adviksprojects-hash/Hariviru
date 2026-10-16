@@ -2,7 +2,18 @@ import FranchiseFormClient from "./FranchiseFormClient";
 
 export const metadata = {
   title: "Own a Franchise | HaruViru Celebration House",
-  description: "Join India's fastest growing private celebration house brand. High returns, complete setup support, and brand recognition.",
+  description:
+    "Partner with HaruViru Celebration House to launch a high-profit 1-hour private celebration arena in your city. Turnkey setup, 4K theater tech, marketing support.",
+  alternates: {
+    canonical: "https://haruviru.com/franchise",
+  },
+  openGraph: {
+    title: "Own a HaruViru Celebration House Franchise",
+    description: "Launch a high-profit private celebration venue with turnkey 4K mini-theater setup and booking technology.",
+    url: "https://haruviru.com/franchise",
+    siteName: "HaruViru Celebration House",
+    images: [{ url: "/icons/icon-512x512.png", width: 512, height: 512 }],
+  },
 };
 
 export default function FranchisePage() {

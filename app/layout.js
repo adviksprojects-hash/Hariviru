@@ -12,8 +12,33 @@ const inter = Inter({
 })
 
 export const metadata = {
-  title: "HaruViru Celebration House | Make Your Special Day Unforgettable",
-  description: "Book 1hr private celebration packages with AC Hall, 4K Theater, Dolby Audio, custom cake & decorations across all HaruViru franchise branches.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://haruviru.com"),
+  title: {
+    default: "HaruViru Celebration House | Private Mini Theater & Party Place in Pune",
+    template: "%s | HaruViru Celebration House",
+  },
+  description:
+    "Book 1hr private celebration packages with AC Hall, 4K Theater, Dolby Audio, custom cake & decorations across HaruViru franchise branches in Pune, Shikrapur, Wagholi, Solapur, Baramati & Maharashtra.",
+  keywords: [
+    "Celebration House",
+    "Celebration House Pune",
+    "Celebration House near me",
+    "Celebration House Wagholi",
+    "Celebration House Shikrapur",
+    "Celebration House Shirur",
+    "Celebration House Baramati",
+    "Celebration House Solapur",
+    "Celebration House Pandharpur",
+    "Private Theater Pune",
+    "Private mini theater for birthday",
+    "Anniversary surprise party hall",
+    "Couple celebration room",
+    "1 hour private celebration space",
+    "HaruViru",
+  ],
+  authors: [{ name: "HaruViru Celebration House", url: "https://haruviru.com" }],
+  creator: "HaruViru Celebration House",
+  publisher: "HaruViru Celebration House",
   manifest: "/manifest.json",
   applicationName: "HaruViru",
   appleWebApp: {
@@ -31,6 +56,39 @@ export const metadata = {
     apple: [
       { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
+  },
+  openGraph: {
+    title: "HaruViru Celebration House | Private Mini Theaters & Celebration Lounges",
+    description: "Book private 1hr celebration spaces with 4K Theater, Dolby Audio, ambient lights & custom decor.",
+    url: "https://haruviru.com",
+    siteName: "HaruViru Celebration House",
+    locale: "en_IN",
+    type: "website",
+    images: [
+      {
+        url: "/icons/icon-512x512.png",
+        width: 512,
+        height: 512,
+        alt: "HaruViru Celebration House",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "HaruViru Celebration House | Private Mini Theaters",
+    description: "Book private 1hr celebration spaces with 4K Theater, Dolby Audio, ambient lights & custom decor.",
+    images: ["/icons/icon-512x512.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 

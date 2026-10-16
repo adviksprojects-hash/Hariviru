@@ -7,15 +7,72 @@ import BranchImageSlider from "@/components/BranchComponents/BranchImageSlider";
 import BranchAvailableSlotsClient from "@/components/BranchComponents/BranchAvailableSlotsClient";
 import { getBranchMapDetails } from "@/lib/maps";
 
+// Enable ISR: caches page for 60s so users get instant load speeds
+export const revalidate = 60;
+
+// Pre-render all active branch pages at build time for instant loading
+export async function generateStaticParams() {
+  try {
+    const branches = await db.branch.findMany({
+      where: { isActive: true },
+      select: { slug: true },
+    });
+    return branches.map((b) => ({ slug: b.slug }));
+  } catch (err) {
+    console.error("[generateStaticParams error]:", err);
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }) {
   const slug = (await params).slug;
   const branch = await db.branch.findUnique({ where: { slug } });
 
-  if (!branch) return { title: "Branch Not Found | HaruViru" };
+  if (!branch) return { title: "Branch Not Found | HaruViru Celebration House" };
+
+  const city = branch.city || "Pune";
+  const title = `${branch.name} (${city}) | Private Mini Theater & Celebration House`;
+  const description = `Book 1hr private celebration packages at ${branch.name}, ${branch.address}, ${city}. Equipped with private 4K theater, Dolby audio, custom birthday & anniversary balloon decor, cake & fog entry.`;
 
   return {
-    title: `${branch.name} | HaruViru Celebration House`,
-    description: `Book 1hr private celebration packages at ${branch.name}, ${branch.city}. Equipped with 4K theater, theme decor, and lounge.`,
+    title,
+    description,
+    keywords: [
+      `Celebration House ${city}`,
+      `Celebration House ${branch.name}`,
+      `Private Theater ${city}`,
+      `Birthday celebration hall ${city}`,
+      `Anniversary surprise party ${city}`,
+      `Private cinema room ${city}`,
+      `Party place near me in ${city}`,
+      `HaruViru ${city}`,
+      `HaruViru Celebration House`,
+    ],
+    alternates: {
+      canonical: `https://haruviru.com/branches/${branch.slug}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `https://haruviru.com/branches/${branch.slug}`,
+      siteName: "HaruViru Celebration House",
+      locale: "en_IN",
+      type: "business.business",
+      images: [
+        {
+          url: branch.images?.[0] || "/icons/icon-512x512.png",
+          width: 1200,
+          height: 630,
+          alt: `${branch.name} Private Celebration Space`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [branch.images?.[0] || "/icons/icon-512x512.png"],
+    },
   };
 }
 
@@ -36,23 +93,91 @@ export default async function BranchDetailPage({ params }) {
     notFound();
   }
 
-  const { packages } = await getBranchPackages(branch.id);
-  const { addOns } = await getBranchAddOns(branch.id);
+  // Parallel fetch packages and addOns to eliminate waterfalls
+  const [{ packages }, { addOns }] = await Promise.all([
+    getBranchPackages(branch.id),
+    getBranchAddOns(branch.id),
+  ]);
 
   const { mapUrl, mapEmbedUrl } = getBranchMapDetails(branch);
   const instagram = branch.instagramHandle || "celebration_house_23";
   const whatsapp = branch.whatsapp || branch.phone?.replace(/[^0-9]/g, "") || "9762486649";
   const phone = branch.phone || "+91 97624 86649";
 
+  // Schema.org LocalBusiness + EventVenue Structured Data for Google Search & AI Search
+  const branchSchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": ["EventVenue", "EntertainmentBusiness", "LocalBusiness"],
+        "@id": `https://haruviru.com/branches/${branch.slug}#venue`,
+        "name": branch.name,
+        "description": branch.description || `Private celebration house and mini-theater in ${branch.city}.`,
+        "url": `https://haruviru.com/branches/${branch.slug}`,
+        "telephone": phone,
+        "priceRange": "₹1499 - ₹4999",
+        "image": branch.images || ["https://haruviru.com/icons/icon-512x512.png"],
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": branch.address,
+          "addressLocality": branch.city,
+          "addressRegion": branch.state || "Maharashtra",
+          "addressCountry": "IN",
+        },
+        "hasMap": mapUrl,
+        "openingHoursSpecification": [
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            "opens": "00:00",
+            "closes": "23:59",
+          },
+        ],
+        "amenityFeature": (branch.amenities || []).map((amenity) => ({
+          "@type": "LocationFeatureSpecification",
+          "name": amenity,
+          "value": "True",
+        })),
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://haruviru.com",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Branches",
+            "item": "https://haruviru.com/branches",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": branch.name,
+            "item": `https://haruviru.com/branches/${branch.slug}`,
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <main className="flex-1 bg-gradient-to-b from-amber-50/40 via-white to-rose-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen pt-4 pb-12 px-4 relative overflow-hidden">
-      
+      {/* Schema.org JSON-LD for Search Engines & Open AI / Perplexity */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(branchSchema) }}
+      />
+
       {/* Background Ambient Glows */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-rose-400/20 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute top-40 -left-40 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="container mx-auto max-w-5xl relative z-10">
-        
         {/* Back Link */}
         <Link href="/branches" className="inline-flex items-center gap-1.5 text-sm font-semibold text-rose-600 hover:underline mb-6">
           ← Back to All Branches
@@ -174,7 +299,6 @@ export default async function BranchDetailPage({ params }) {
 
         {/* Info Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
-          
           {/* Main Info */}
           <div className="lg:col-span-2 space-y-8">
             <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md p-8 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs">
@@ -198,7 +322,6 @@ export default async function BranchDetailPage({ params }) {
           <div className="space-y-6 sticky top-28">
             <BranchAvailableSlotsClient branchId={branch.id} branchSlug={branch.slug} />
           </div>
-
         </div>
 
         {/* 1hr Celebration Packages for this Franchise */}
@@ -243,7 +366,6 @@ export default async function BranchDetailPage({ params }) {
             ></iframe>
           </div>
         </section>
-
       </div>
     </main>
   );

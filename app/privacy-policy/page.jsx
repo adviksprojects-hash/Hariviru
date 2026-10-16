@@ -3,6 +3,9 @@ import Link from "next/link";
 export const metadata = {
   title: "Privacy Policy | HaruViru Celebration House",
   description: "Privacy Policy and WhatsApp Messaging Terms for HaruViru Celebration House.",
+  alternates: {
+    canonical: "https://haruviru.com/privacy-policy",
+  },
 };
 
 export default function PrivacyPolicyPage() {

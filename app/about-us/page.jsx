@@ -2,12 +2,35 @@ import Link from "next/link";
 
 export const metadata = {
   title: "About Us | HaruViru Celebration House",
-  description: "Learn about HaruViru Celebration House - India's leading private event space provider.",
+  description:
+    "Learn about HaruViru Celebration House - India's leading private 1-hour event space and 4K mini-theater provider with active branches across Maharashtra.",
+  alternates: {
+    canonical: "https://haruviru.com/about-us",
+  },
+  openGraph: {
+    title: "About HaruViru Celebration House",
+    description: "Learn about India's leading private event space and mini-theater network.",
+    url: "https://haruviru.com/about-us",
+    siteName: "HaruViru Celebration House",
+    images: [{ url: "/icons/icon-512x512.png", width: 512, height: 512 }],
+  },
+};
+
+const aboutSchema = {
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "name": "About HaruViru Celebration House",
+  "description": "Learn about HaruViru Celebration House, India's leading private 1-hour celebration space and 4K mini-theater network.",
+  "url": "https://haruviru.com/about-us",
 };
 
 export default function AboutUsPage() {
   return (
     <main className="flex-1 bg-gradient-to-b from-amber-50/40 via-white to-rose-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen pt-4 pb-12 px-4 relative overflow-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutSchema) }}
+      />
       
       {/* Background Ambient Glows */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-rose-400/20 rounded-full blur-3xl pointer-events-none"></div>

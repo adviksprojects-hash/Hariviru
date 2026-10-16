@@ -7,29 +7,161 @@ import PackageShowcase from "@/components/PackageComponents/PackageShowcase";
 import WhyChooseUs from "@/components/HomeComponents/WhyChooseUs";
 import BranchCard from "@/components/BranchComponents/BranchCard";
 
+// Enable Incremental Static Regeneration (ISR) - Page renders in ~10ms from cache
+export const revalidate = 60;
+
 export const metadata = {
-  title: "HaruViru Celebration House | Premium 1hr Private Celebration Arenas",
-  description: "Book 1hr private celebration packages with AC Hall, 4K Theater, Dolby Audio, custom cake & decorations across all HaruViru franchise branches.",
+  title: "HaruViru Celebration House | Private Mini Theater & Party Place in Pune & Maharashtra",
+  description:
+    "Book 1hr private celebration packages in Pune, Shikrapur, Wagholi, Shirur, Baramati, Solapur, Pandharpur & Rajgurunagar. Private 4K Theater, Dolby Sound, Custom Birthday & Anniversary Balloon Decor, Cake & Surprises.",
+  keywords: [
+    "Celebration House",
+    "Celebration House Pune",
+    "Celebration House Wagholi",
+    "Celebration House Shikrapur",
+    "Celebration House Shirur",
+    "Celebration House Baramati",
+    "Celebration House Solapur",
+    "Celebration House Pandharpur",
+    "Celebration House Rajgurunagar",
+    "Celebration House near me",
+    "Private Theater Pune",
+    "Private mini theater for birthday",
+    "Anniversary celebration place in Pune",
+    "Private celebration hall for couples",
+    "1 hour private celebration space",
+    "HaruViru Celebration House",
+  ],
+  alternates: {
+    canonical: "https://haruviru.com",
+  },
   openGraph: {
-    title: "HaruViru Celebration House",
-    description: "Unforgettable Private Celebration Spaces with 4K Theater, Ambient Lights, and Custom Decor.",
+    title: "HaruViru Celebration House | Private Mini Theaters & Celebration Lounges",
+    description:
+      "Unforgettable Private Celebration Spaces with 4K Theater, Ambient Lights, Custom Decor & Cake. Branches in Pune, Wagholi, Shikrapur, Solapur, Baramati and more.",
     url: "https://haruviru.com",
-    siteName: "HaruViru",
+    siteName: "HaruViru Celebration House",
+    locale: "en_IN",
+    type: "website",
+    images: [
+      {
+        url: "/icons/icon-512x512.png",
+        width: 512,
+        height: 512,
+        alt: "HaruViru Celebration House",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "HaruViru Celebration House | Private Mini Theater & Party Place",
+    description: "Book 1hr private celebration packages with AC Hall, 4K Theater, Dolby Audio, custom cake & decorations.",
+    images: ["/icons/icon-512x512.png"],
   },
 };
 
 export default async function Home() {
-  const branches = await db.branch.findMany({
-    where: { isActive: true },
-    take: 3,
-  });
+  // Parallel fetch to eliminate waterfalls and load in lightning speed
+  let branches = [];
+  let globalPackages = [];
+  let globalAddOns = [];
 
-  const { packages: globalPackages } = await getGlobalPackages();
-  const { addOns: globalAddOns } = await getGlobalAddOns();
+  try {
+    const [fetchedBranches, pkgsRes, addOnsRes] = await Promise.all([
+      db.branch.findMany({
+        where: { isActive: true },
+        take: 6,
+        orderBy: { createdAt: "desc" },
+      }),
+      getGlobalPackages(),
+      getGlobalAddOns(),
+    ]);
+
+    branches = fetchedBranches || [];
+    globalPackages = pkgsRes?.packages || [];
+    globalAddOns = addOnsRes?.addOns || [];
+  } catch (err) {
+    console.error("[Home Page Parallel Fetch Error]:", err);
+  }
+
+  // Schema.org Structured Data for Google Search & AI Search Engines
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://haruviru.com/#website",
+        "url": "https://haruviru.com",
+        "name": "HaruViru Celebration House",
+        "description": "India's premier private celebration arena & mini-theater booking network.",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://haruviru.com/branches?q={search_term_string}",
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://haruviru.com/#organization",
+        "name": "HaruViru Celebration House",
+        "url": "https://haruviru.com",
+        "logo": "https://haruviru.com/icons/icon-512x512.png",
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+91-9762486649",
+          "contactType": "customer service",
+          "areaServed": "IN",
+          "availableLanguage": ["English", "Hindi", "Marathi"],
+        },
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is HaruViru Celebration House?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "HaruViru Celebration House offers private 1-hour air-conditioned celebration spaces equipped with 4K theater screens, Dolby surround sound, custom balloon and floral decor, personalized cakes, fog and cold fire entries for birthdays, anniversaries, and romantic dates.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Where are HaruViru Celebration House branches located?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "HaruViru has active branches across Maharashtra including Pune (Shikrapur, Wagholi, Shirur, Rajgurunagar), Baramati, Solapur, Pandharpur, Madha, and Shrigonda with 24-hour celebration slots.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "How can I book a celebration slot at HaruViru?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "You can select your preferred branch on haruviru.com, pick an available 1-hour time slot, choose custom decoration packages and add-ons, and confirm online instantly with UPI or QR payment.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "What are the celebration package prices?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Packages start from ₹1,499 per hour including private mini-theater access, ambient lighting, music setup, and basic decorations, with premium packages including photo shoots, cakes, and special entries.",
+            },
+          },
+        ],
+      },
+    ],
+  };
 
   return (
     <main className="flex-1 bg-gradient-to-b from-amber-50/40 via-white to-rose-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      
+      {/* Structured Data for SEO & Open AI / Perplexity / Google Search */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
+
       {/* Interactive Hero Section with Party Popper Confetti Squares & Coiling Streamers Canvas */}
       <InteractiveHeroConfetti>
         <section className="relative overflow-hidden pt-6 pb-12 lg:pt-8 lg:pb-16 px-4">
@@ -37,7 +169,6 @@ export default async function Home() {
           <div className="absolute top-40 -left-40 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>
 
           <div className="container mx-auto max-w-6xl text-center relative z-10">
-            
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 text-xs sm:text-sm font-bold mb-4 shadow-xs">
               ✨ India's Most Loved Private Celebration Destination
             </div>
@@ -87,7 +218,6 @@ export default async function Home() {
                 <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Franchise Locations</div>
               </div>
             </div>
-
           </div>
         </section>
       </InteractiveHeroConfetti>
@@ -101,7 +231,7 @@ export default async function Home() {
       {/* 3. Why Choose Us Section */}
       <WhyChooseUs />
 
-      {/* 4. Featured Branches Showcase (Shows 3 Popular Branches with View All CTA) */}
+      {/* 4. Featured Branches Showcase (Shows Popular Branches with View All CTA) */}
       <section className="py-16 px-4 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800">
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
@@ -142,7 +272,6 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
     </main>
   );
 }

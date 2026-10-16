@@ -3,12 +3,46 @@ import { contactInfo } from "@/data/PackageData/PackageData";
 
 export const metadata = {
   title: "Contact Us | HaruViru Celebration House",
-  description: "Get in touch with HaruViru Celebration House team for bookings, inquiries, and customer support.",
+  description:
+    "Get in touch with HaruViru Celebration House team for branch bookings, custom decor, mini-theater inquiries, and customer support.",
+  alternates: {
+    canonical: "https://haruviru.com/contact",
+  },
+  openGraph: {
+    title: "Contact HaruViru Celebration House",
+    description: "Connect with our team via Phone, WhatsApp, or Email for instant celebration booking support.",
+    url: "https://haruviru.com/contact",
+    siteName: "HaruViru Celebration House",
+    images: [{ url: "/icons/icon-512x512.png", width: 512, height: 512 }],
+  },
+};
+
+const contactSchema = {
+  "@context": "https://schema.org",
+  "@type": "ContactPage",
+  "name": "Contact HaruViru Celebration House",
+  "url": "https://haruviru.com/contact",
+  "mainEntity": {
+    "@type": "Organization",
+    "name": "HaruViru Celebration House",
+    "telephone": "+91-9762486649",
+    "email": "haruvirucelebrationhouse@gmail.com",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Shikrapur, Pune",
+      "addressRegion": "Maharashtra",
+      "addressCountry": "IN",
+    },
+  },
 };
 
 export default function ContactPage() {
   return (
     <main className="flex-1 bg-gradient-to-b from-amber-50/40 via-white to-rose-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 min-h-screen pt-4 pb-12 px-4 relative overflow-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(contactSchema) }}
+      />
       {/* Background Ambient Glows */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-rose-400/20 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute top-40 -left-40 w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none"></div>

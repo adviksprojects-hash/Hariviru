@@ -3,6 +3,9 @@ import Link from "next/link";
 export const metadata = {
   title: "Terms & Conditions | HaruViru Celebration House",
   description: "Terms and conditions for booking private halls at HaruViru Celebration House.",
+  alternates: {
+    canonical: "https://haruviru.com/terms",
+  },
 };
 
 export default function TermsPage() {
