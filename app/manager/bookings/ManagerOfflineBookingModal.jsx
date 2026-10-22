@@ -4,6 +4,59 @@ import { useState, useEffect, useCallback } from "react";
 import { createOfflineBooking, getBranchSlotStatusForDate } from "@/lib/actions";
 import { packageAddOns } from "@/data/PackageData/PackageData";
 
+function getISTDateString(date = new Date()) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
+  } catch {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+}
+
+function isSlotTimePassed(slot, selectedDate) {
+  if (slot?.isTimePassed) return true;
+  if (!selectedDate) return false;
+  try {
+    const todayStr = getISTDateString();
+    if (selectedDate !== todayStr) return false;
+
+    const istTimeStr = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date());
+
+    const [curH, curM] = istTimeStr.split(":").map(Number);
+    const currentMinutes = curH * 60 + curM;
+
+    const rawTime = (slot?.startTime || "").trim();
+    if (!rawTime) return false;
+    let timePart = rawTime.split("-")[0].trim().toUpperCase();
+    const isPm = timePart.includes("PM");
+    const isAm = timePart.includes("AM");
+    timePart = timePart.replace(/(AM|PM)/g, "").trim();
+    const [hStr, mStr] = timePart.split(":");
+    let h = parseInt(hStr, 10);
+    const m = parseInt(mStr || "0", 10);
+    if (isNaN(h)) return false;
+    if (isPm && h < 12) h += 12;
+    if (isAm && h === 12) h = 0;
+    const slotMinutes = h * 60 + m;
+
+    return slotMinutes <= currentMinutes;
+  } catch {
+    return false;
+  }
+}
+
 export default function ManagerOfflineBookingModal({
   branch,
   halls = [],
@@ -16,7 +69,7 @@ export default function ManagerOfflineBookingModal({
   onClose,
   onSuccess,
 }) {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getISTDateString();
 
   const activePackages = packages && packages.length > 0 ? packages : [];
   const activeHalls = halls && halls.length > 0 ? halls : [{ id: null, name: "Hall 1" }];
@@ -80,11 +133,12 @@ export default function ManagerOfflineBookingModal({
           currentSlotObj &&
           !currentSlotObj.isBooked &&
           !currentSlotObj.isDisabledForDate &&
-          !currentSlotObj.isTimePassed;
+          !currentSlotObj.isTimePassed &&
+          !isSlotTimePassed(currentSlotObj, bookingDate);
 
         if (!isCurrentAvailable) {
           const firstAvail = res.slots.find(
-            (s) => !s.isBooked && !s.isDisabledForDate && !s.isTimePassed
+            (s) => !s.isBooked && !s.isDisabledForDate && !s.isTimePassed && !isSlotTimePassed(s, bookingDate)
           );
           setSelectedSlotId(firstAvail ? firstAvail.id : "");
         }
@@ -229,13 +283,13 @@ export default function ManagerOfflineBookingModal({
   const getDateOffsetPill = (offsetDays) => {
     const d = new Date();
     d.setDate(d.getDate() + offsetDays);
-    const iso = d.toISOString().split("T")[0];
+    const iso = getISTDateString(d);
     const label =
       offsetDays === 0
         ? "Today"
         : offsetDays === 1
         ? "Tomorrow"
-        : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+        : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "Asia/Kolkata" });
     return { iso, label };
   };
 
@@ -423,7 +477,7 @@ export default function ManagerOfflineBookingModal({
                     .map((slot) => {
                       const isBooked = slot.isBooked;
                       const isDisabled = slot.isDisabledForDate;
-                      const isPassed = slot.isTimePassed;
+                      const isPassed = slot.isTimePassed || isSlotTimePassed(slot, bookingDate);
                       const isAvailable = !isBooked && !isDisabled && !isPassed;
                       const isSelected = selectedSlotId === slot.id;
 

@@ -292,7 +292,9 @@ export default function AdminSettingsClient({
 🕒 *Slot:* {{7}}
 🏛️ *Hall:* {{8}}
 💰 *Total Amount:* ₹{{9}}
-💳 *Payment:* {{10}}
+💵 *Paid Amount:* ₹{{10}}
+⏳ *Remaining Balance:* ₹{{11}}
+💳 *Payment:* {{12}}
 
 Please check the Admin & Manager Dashboard for complete booking details! ✨`;
 
@@ -683,10 +685,10 @@ Please check the Admin & Manager Dashboard for complete booking details! ✨`;
 
             <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 text-xs space-y-1.5">
               <div className="font-bold text-amber-900 dark:text-amber-300">
-                ℹ️ Template Variable Guide (10 Parameters):
+                ℹ️ Template Variable Guide (12 Parameters with Deposit Breakdown):
               </div>
               <ul className="text-[11px] text-amber-800 dark:text-amber-400 space-y-0.5 list-disc pl-4 font-mono">
-                <li>{"{{1}}"} : Branch Name (e.g. HaruViru Shikrapur)</li>
+                <li>{"{{1}}"} : Branch Name (e.g. HaruViru Baner Pune)</li>
                 <li>{"{{2}}"} : Booking Ref (e.g. HV-2026-BOOK-42)</li>
                 <li>{"{{3}}"} : Booking Type (Online / Walk-in / Extra)</li>
                 <li>{"{{4}}"} : Customer Full Name</li>
@@ -694,8 +696,10 @@ Please check the Admin & Manager Dashboard for complete booking details! ✨`;
                 <li>{"{{6}}"} : Celebration Date (e.g. 25 Oct 2026)</li>
                 <li>{"{{7}}"} : Reserved Slot (e.g. 06:00 PM - 07:00 PM)</li>
                 <li>{"{{8}}"} : Hall Name (e.g. Hall 1)</li>
-                <li>{"{{9}}"} : Total / Deposit Paid Amount</li>
-                <li>{"{{10}}"} : Payment Status (PAID / PARTIAL)</li>
+                <li>{"{{9}}"} : Total Amount (e.g. 1499)</li>
+                <li>{"{{10}}"} : Paid Amount (e.g. 500)</li>
+                <li>{"{{11}}"} : Remaining Balance (e.g. 999)</li>
+                <li>{"{{12}}"} : Payment Status (PAID / PARTIAL)</li>
               </ul>
             </div>
           </div>

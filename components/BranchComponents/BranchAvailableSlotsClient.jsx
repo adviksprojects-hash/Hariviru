@@ -4,8 +4,61 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { getBranchSlotStatusForDate, getBranchHalls } from "@/lib/actions";
 
+function getISTDateString(date = new Date()) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
+  } catch {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+}
+
+function isSlotTimePassed(slot, selectedDate) {
+  if (slot?.isTimePassed) return true;
+  if (!selectedDate) return false;
+  try {
+    const todayStr = getISTDateString();
+    if (selectedDate !== todayStr) return false;
+
+    const istTimeStr = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date());
+
+    const [curH, curM] = istTimeStr.split(":").map(Number);
+    const currentMinutes = curH * 60 + curM;
+
+    const rawTime = (slot?.startTime || "").trim();
+    if (!rawTime) return false;
+    let timePart = rawTime.split("-")[0].trim().toUpperCase();
+    const isPm = timePart.includes("PM");
+    const isAm = timePart.includes("AM");
+    timePart = timePart.replace(/(AM|PM)/g, "").trim();
+    const [hStr, mStr] = timePart.split(":");
+    let h = parseInt(hStr, 10);
+    const m = parseInt(mStr || "0", 10);
+    if (isNaN(h)) return false;
+    if (isPm && h < 12) h += 12;
+    if (isAm && h === 12) h = 0;
+    const slotMinutes = h * 60 + m;
+
+    return slotMinutes <= currentMinutes;
+  } catch {
+    return false;
+  }
+}
+
 export default function BranchAvailableSlotsClient({ branchId, branchSlug }) {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getISTDateString();
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [halls, setHalls] = useState([]);
   const [selectedHallId, setSelectedHallId] = useState(null);
@@ -50,13 +103,13 @@ export default function BranchAvailableSlotsClient({ branchId, branchSlug }) {
   const getDateOffsetPill = (offsetDays) => {
     const d = new Date();
     d.setDate(d.getDate() + offsetDays);
-    const iso = d.toISOString().split("T")[0];
+    const iso = getISTDateString(d);
     const label =
       offsetDays === 0
         ? "Today"
         : offsetDays === 1
         ? "Tomorrow"
-        : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+        : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "Asia/Kolkata" });
     return { iso, label };
   };
 
@@ -204,7 +257,8 @@ export default function BranchAvailableSlotsClient({ branchId, branchSlug }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2 max-h-[560px] overflow-y-auto pr-1 scrollbar-thin">
           {filteredSlots.map((s) => {
-            const isAvailable = !s.isBooked && !s.isDisabledForDate && !s.isTimePassed;
+            const isPassed = s.isTimePassed || isSlotTimePassed(s, selectedDate);
+            const isAvailable = !s.isBooked && !s.isDisabledForDate && !isPassed;
             const targetHallObj = halls.find((h) => h.id === selectedHallId);
             const hallName = targetHallObj ? targetHallObj.name : "Hall 1";
 
@@ -235,7 +289,7 @@ export default function BranchAvailableSlotsClient({ branchId, branchSlug }) {
                     >
                       Book Slot →
                     </Link>
-                  ) : s.isTimePassed ? (
+                  ) : isPassed ? (
                     <span className="w-full text-center px-2 py-1 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 text-[11px] font-bold">
                       ⏰ Time Passed
                     </span>
