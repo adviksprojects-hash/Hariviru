@@ -22,11 +22,17 @@ function getISTDateString(date = new Date()) {
 }
 
 function isSlotTimePassed(slot, selectedDate) {
-  if (slot?.isTimePassed) return true;
   if (!selectedDate) return false;
   try {
     const todayStr = getISTDateString();
-    if (selectedDate !== todayStr) return false;
+    // 1. Future dates (Tomorrow and onwards) can NEVER have time-passed slots
+    if (selectedDate > todayStr) return false;
+
+    // 2. Past dates (Yesterday and earlier) are always time passed
+    if (selectedDate < todayStr) return true;
+
+    // 3. For Today: check server flag first, or compute client-side using Indian Standard Time
+    if (slot?.isTimePassed) return true;
 
     const istTimeStr = new Intl.DateTimeFormat("en-US", {
       timeZone: "Asia/Kolkata",
@@ -36,7 +42,8 @@ function isSlotTimePassed(slot, selectedDate) {
     }).format(new Date());
 
     const [curH, curM] = istTimeStr.split(":").map(Number);
-    const currentMinutes = curH * 60 + curM;
+    const cleanH = curH === 24 ? 0 : (curH || 0);
+    const currentMinutes = cleanH * 60 + (curM || 0);
 
     const rawTime = (slot?.startTime || "").trim();
     if (!rawTime) return false;
@@ -117,12 +124,11 @@ export default function BookingFormClient({
           currentSlotObj &&
           !currentSlotObj.isBooked &&
           !currentSlotObj.isDisabledForDate &&
-          !currentSlotObj.isTimePassed &&
           !isSlotTimePassed(currentSlotObj, bookingDate);
 
         if (!isCurrentAvailable) {
           const firstAvail = res.slots.find(
-            (s) => !s.isBooked && !s.isDisabledForDate && !s.isTimePassed && !isSlotTimePassed(s, bookingDate)
+            (s) => !s.isBooked && !s.isDisabledForDate && !isSlotTimePassed(s, bookingDate)
           );
           if (firstAvail) {
             setSelectedSlotId(firstAvail.id);
@@ -794,7 +800,7 @@ export default function BookingFormClient({
                       return true;
                     })
                     .map((s) => {
-                      const isPassed = s.isTimePassed || isSlotTimePassed(s, bookingDate);
+                      const isPassed = isSlotTimePassed(s, bookingDate);
                       const isAvailable = !s.isBooked && !s.isDisabledForDate && !isPassed;
                       const isSelected = selectedSlotId === s.id;
 

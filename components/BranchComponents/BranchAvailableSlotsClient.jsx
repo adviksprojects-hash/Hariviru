@@ -21,11 +21,17 @@ function getISTDateString(date = new Date()) {
 }
 
 function isSlotTimePassed(slot, selectedDate) {
-  if (slot?.isTimePassed) return true;
   if (!selectedDate) return false;
   try {
     const todayStr = getISTDateString();
-    if (selectedDate !== todayStr) return false;
+    // 1. Future dates (Tomorrow and onwards) can NEVER have time-passed slots
+    if (selectedDate > todayStr) return false;
+
+    // 2. Past dates (Yesterday and earlier) are always time passed
+    if (selectedDate < todayStr) return true;
+
+    // 3. For Today: check server flag first, or compute client-side using Indian Standard Time
+    if (slot?.isTimePassed) return true;
 
     const istTimeStr = new Intl.DateTimeFormat("en-US", {
       timeZone: "Asia/Kolkata",
@@ -35,7 +41,8 @@ function isSlotTimePassed(slot, selectedDate) {
     }).format(new Date());
 
     const [curH, curM] = istTimeStr.split(":").map(Number);
-    const currentMinutes = curH * 60 + curM;
+    const cleanH = curH === 24 ? 0 : (curH || 0);
+    const currentMinutes = cleanH * 60 + (curM || 0);
 
     const rawTime = (slot?.startTime || "").trim();
     if (!rawTime) return false;
@@ -257,7 +264,7 @@ export default function BranchAvailableSlotsClient({ branchId, branchSlug }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2 max-h-[560px] overflow-y-auto pr-1 scrollbar-thin">
           {filteredSlots.map((s) => {
-            const isPassed = s.isTimePassed || isSlotTimePassed(s, selectedDate);
+            const isPassed = isSlotTimePassed(s, selectedDate);
             const isAvailable = !s.isBooked && !s.isDisabledForDate && !isPassed;
             const targetHallObj = halls.find((h) => h.id === selectedHallId);
             const hallName = targetHallObj ? targetHallObj.name : "Hall 1";

@@ -4,11 +4,28 @@ import { useState, useEffect, useCallback } from "react";
 import { getBranchSlotStatusForDate, getBranchCalendarBookingsForMonth, toggleSlotDisabledDate } from "@/lib/actions";
 import ManagerOfflineBookingModal from "../bookings/ManagerOfflineBookingModal";
 
+function getISTDateString(date = new Date()) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
+  } catch {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+}
+
 export default function ManagerCalendarClient({ branch, halls = [], packages = [], addOns = [] }) {
+  const todayISTStr = getISTDateString();
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth() + 1); // 1-12
-  const [selectedDateStr, setSelectedDateStr] = useState(today.toISOString().split("T")[0]);
+  const [selectedDateStr, setSelectedDateStr] = useState(todayISTStr);
   const [selectedHallId, setSelectedHallId] = useState(halls[0]?.id || null);
 
   const [monthBookings, setMonthBookings] = useState([]);
@@ -283,7 +300,8 @@ export default function ManagerCalendarClient({ branch, halls = [], packages = [
             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
               {daySlots.map((s) => {
                 const isBooked = s.isBooked;
-                const isTimePassed = s.isTimePassed;
+                const isPastOrToday = selectedDateStr <= todayISTStr;
+                const isTimePassed = isPastOrToday && s.isTimePassed;
                 const isAvailable = !isBooked && !isTimePassed && !s.isDisabledForDate;
 
                 return (
