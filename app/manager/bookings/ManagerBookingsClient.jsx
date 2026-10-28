@@ -337,8 +337,21 @@ export default function ManagerBookingsClient({
                       </td>
 
                       <td className="py-4 px-3">
-                        <div className="font-black text-rose-600 text-base">
-                          ₹{b.totalAmount}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="font-black text-rose-600 text-base">
+                            ₹{b.totalAmount}
+                          </div>
+                          {(() => {
+                            const discMatch = b.notes?.match(/\[Manager Discount:\s*₹([\d.]+)/);
+                            if (discMatch) {
+                              return (
+                                <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded-md">
+                                  🏷️ ₹{discMatch[1]} Off
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
 
                         {(() => {
